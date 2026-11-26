@@ -8,7 +8,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
-/** First screen: pick a portal. Seller and Admin portals are delivered by Tasks 2 and 3. */
+/** First screen: enter the Buyer or Admin portal. The Seller entry is reserved for Task 2. */
 public class WelcomeView {
     private final AppContext app;
 
@@ -34,7 +34,7 @@ public class WelcomeView {
         Button seller = new Button("Seller portal");
         seller.setOnAction(e -> Ui.info("Seller portal", "The Seller Portal is Task 2 of the team project."));
         Button admin = new Button("Admin portal");
-        admin.setOnAction(e -> Ui.info("Admin portal", "The Admin Portal is Task 3 of the team project."));
+        admin.setOnAction(e -> app.showAdminLogin());
         HBox otherRow = new HBox(10, seller, admin);
         otherRow.setAlignment(Pos.CENTER);
 

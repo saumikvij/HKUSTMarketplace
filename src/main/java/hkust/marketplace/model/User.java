@@ -11,7 +11,7 @@ public abstract class User implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private final String id;
-    private final String username;
+    private String username;
     private String fullName;
     private String passwordHash;
     private String salt;
@@ -38,6 +38,20 @@ public abstract class User implements Serializable {
     }
 
     /** @return the account type */
+    /** Erases login and profile identifying fields, retaining the stable id for historical records. */
+    public void anonymise(String alias) {
+        username = alias;
+        fullName = "Deleted account";
+        passwordHash = "";
+        salt = "";
+        status = AccountStatus.DELETED;
+        if (this instanceof Buyer buyer) buyer.setResidenceHall(null);
+        if (this instanceof Seller seller) {
+            seller.setBio(null);
+            seller.getMeetupLocations().clear();
+        }
+    }
+
     public abstract Role getRole();
 
     /** @return unique id */

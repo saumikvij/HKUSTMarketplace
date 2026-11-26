@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ListingForm.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace – Buyer and Admin</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">ListingForm.java</span></div><h1>ListingForm.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import hkust.marketplace.model.*;
+import hkust.marketplace.util.ValidationException;
+import java.math.BigDecimal;
+import java.util.List;
+
+/** Validated listing details shared by admin creation, moderation edits and seller submissions. */
+public record ListingForm(ListingType type, String title, Category category, Condition condition,
+                          String description, String location, BigDecimal price, long seconds, List&lt;String&gt; photos) {
+    /** HKUST meet-up locations used in the editor. Existing listings retain their recorded location. */
+<span class="fc" id="L12">    public static final List&lt;String&gt; LOCATIONS = List.of(&quot;Atrium&quot;, &quot;Library&quot;, &quot;LG1 Canteen&quot;, &quot;Sports Hall&quot;,</span>
+            &quot;Hall 5 Lobby&quot;, &quot;North Bus Stop&quot;, &quot;South Bus Stop&quot;, &quot;Academic Concourse&quot;);
+
+<span class="fc" id="L15">    public ListingForm {</span>
+<span class="pc bpc" id="L16" title="3 of 6 branches missed.">        if (type == null || category == null || condition == null) throw new ValidationException(&quot;Select a type, category and condition.&quot;);</span>
+<span class="fc" id="L17">        title = required(title, &quot;Item title&quot;);</span>
+<span class="fc" id="L18">        description = required(description, &quot;Description&quot;);</span>
+<span class="fc" id="L19">        location = required(location, &quot;Meet-up location&quot;);</span>
+<span class="pc bpc" id="L20" title="1 of 8 branches missed.">        if (type == ListingType.SELL &amp;&amp; (price == null || price.signum() &lt; 0 || price.stripTrailingZeros().scale() &gt; 2))</span>
+<span class="fc" id="L21">            throw new ValidationException(&quot;Enter a non-negative sale price with at most two decimal places.&quot;);</span>
+<span class="fc bfc" id="L22" title="All 4 branches covered.">        if (type == ListingType.LEND &amp;&amp; seconds &lt; DealService.MIN_BORROW.toSeconds())</span>
+<span class="fc" id="L23">            throw new ValidationException(&quot;Lending duration must be at least five seconds.&quot;);</span>
+<span class="fc bfc" id="L24" title="All 2 branches covered.">        if (type != ListingType.SELL) price = null;</span>
+<span class="fc bfc" id="L25" title="All 2 branches covered.">        if (type != ListingType.LEND) seconds = 0;</span>
+<span class="pc bpc" id="L26" title="4 of 10 branches missed.">        if (photos == null || photos.size() &gt; Listing.MAX_PHOTOS || photos.stream().anyMatch(s -&gt; s == null || s.isBlank()))</span>
+<span class="fc" id="L27">            throw new ValidationException(&quot;Choose up to six photos.&quot;);</span>
+<span class="fc" id="L28">        photos = List.copyOf(photos);</span>
+<span class="fc" id="L29">    }</span>
+
+    static String required(String value, String field) {
+<span class="pc bpc" id="L32" title="1 of 4 branches missed.">        if (value == null || value.isBlank()) throw new ValidationException(field + &quot; is required.&quot;);</span>
+<span class="fc" id="L33">        return value.trim();</span>
+    }
+
+    void apply(Listing listing) {
+<span class="fc" id="L37">        listing.setType(type);</span>
+<span class="fc" id="L38">        listing.setTitle(title);</span>
+<span class="fc" id="L39">        listing.setCategory(category);</span>
+<span class="fc" id="L40">        listing.setCondition(condition);</span>
+<span class="fc" id="L41">        listing.setDescription(description);</span>
+<span class="fc" id="L42">        listing.setMeetupLocation(location);</span>
+<span class="fc" id="L43">        listing.setPrice(price);</span>
+<span class="fc" id="L44">        listing.setLendingDurationSeconds(seconds);</span>
+<span class="fc" id="L45">        listing.getPhotos().clear();</span>
+<span class="fc" id="L46">        listing.getPhotos().addAll(photos);</span>
+<span class="fc" id="L47">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

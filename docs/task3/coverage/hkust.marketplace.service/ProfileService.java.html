@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProfileService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace – Buyer and Admin</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">ProfileService.java</span></div><h1>ProfileService.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import hkust.marketplace.data.DataStore;
+import hkust.marketplace.model.Buyer;
+import hkust.marketplace.model.User;
+import hkust.marketplace.util.CredentialValidator;
+import hkust.marketplace.util.MarketplaceException;
+import hkust.marketplace.util.PasswordHasher;
+import hkust.marketplace.util.ValidationException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/** Buyer profile editing (Task 1.7). The username cannot be changed. */
+public class ProfileService {
+    private final DataStore store;
+
+    /** @param store data store */
+<span class="fc" id="L19">    public ProfileService(DataStore store) {</span>
+<span class="fc" id="L20">        this.store = store;</span>
+<span class="fc" id="L21">    }</span>
+
+    /**
+     * Updates the buyer's full name and residence hall.
+     * @param buyerId buyer
+     * @param fullName new full name
+     * @param residenceHall new residence hall; blank means not given
+     * @return the updated buyer
+     * @throws ValidationException if the full name is blank or too long
+     * @throws MarketplaceException if nothing changed
+     */
+    public Buyer updateDetails(String buyerId, String fullName, String residenceHall) {
+<span class="fc" id="L33">        Buyer buyer = Access.requireBuyer(store, buyerId);</span>
+<span class="fc bfc" id="L34" title="All 4 branches covered.">        if (fullName == null || fullName.isBlank()) {</span>
+<span class="fc" id="L35">            throw new ValidationException(&quot;Full name cannot be empty&quot;);</span>
+        }
+<span class="fc bfc" id="L37" title="All 2 branches covered.">        if (!CredentialValidator.isValidFullName(fullName)) {</span>
+<span class="fc" id="L38">            throw new ValidationException(&quot;Full name must be at most &quot;</span>
+                    + CredentialValidator.MAX_FULL_NAME_LENGTH + &quot; characters&quot;);
+        }
+<span class="fc" id="L41">        String name = fullName.trim();</span>
+<span class="pc bpc" id="L42" title="1 of 4 branches missed.">        String hall = residenceHall == null || residenceHall.isBlank() ? null : residenceHall.trim();</span>
+<span class="fc bfc" id="L43" title="All 4 branches covered.">        if (name.equals(buyer.getFullName()) &amp;&amp; Objects.equals(hall, buyer.getResidenceHall())) {</span>
+<span class="fc" id="L44">            throw new MarketplaceException(&quot;There are no changes to save.&quot;);</span>
+        }
+<span class="fc" id="L46">        buyer.setFullName(name);</span>
+<span class="fc" id="L47">        buyer.setResidenceHall(hall);</span>
+<span class="fc" id="L48">        store.commit();</span>
+<span class="fc" id="L49">        return buyer;</span>
+    }
+
+    /**
+     * Changes a user's password after checking the current one.
+     * @param userId user
+     * @param currentPassword current password
+     * @param newPassword new password meeting the team rules
+     * @param confirmPassword must equal the new password
+     * @throws ValidationException if the current password is wrong or the new one breaks a rule
+     */
+    public void changePassword(String userId, String currentPassword, String newPassword, String confirmPassword) {
+<span class="fc" id="L61">        User user = store.findUser(userId).orElseThrow(() -&gt; new MarketplaceException(&quot;Account not found.&quot;));</span>
+<span class="fc bfc" id="L62" title="All 4 branches covered.">        if (!PasswordHasher.matches(currentPassword == null ? &quot;&quot; : currentPassword, user.getSalt(),</span>
+<span class="fc" id="L63">                user.getPasswordHash())) {</span>
+<span class="fc" id="L64">            throw new ValidationException(&quot;Current password is incorrect&quot;);</span>
+        }
+<span class="fc" id="L66">        List&lt;String&gt; errors = new ArrayList&lt;&gt;(CredentialValidator.passwordProblems(newPassword));</span>
+<span class="fc bfc" id="L67" title="All 4 branches covered.">        if (newPassword != null &amp;&amp; !newPassword.equals(confirmPassword)) {</span>
+<span class="fc" id="L68">            errors.add(&quot;New passwords do not match&quot;);</span>
+        }
+<span class="fc bfc" id="L70" title="All 4 branches covered.">        if (newPassword != null &amp;&amp; newPassword.equals(currentPassword)) {</span>
+<span class="fc" id="L71">            errors.add(&quot;New password must be different from the current password&quot;);</span>
+        }
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        if (!errors.isEmpty()) {</span>
+<span class="fc" id="L74">            throw new ValidationException(errors);</span>
+        }
+<span class="fc" id="L76">        String salt = PasswordHasher.newSalt();</span>
+<span class="fc" id="L77">        user.setPassword(PasswordHasher.hash(newPassword, salt), salt);</span>
+<span class="fc" id="L78">        store.commit();</span>
+<span class="fc" id="L79">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

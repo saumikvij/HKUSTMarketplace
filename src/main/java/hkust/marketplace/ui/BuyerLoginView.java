@@ -16,10 +16,16 @@ import javafx.scene.layout.VBox;
 /** Buyer login (Task 1.2). Seller and admin accounts are refused here. */
 public class BuyerLoginView {
     private final AppContext app;
+    private final Role role;
 
     /** @param app app context */
     public BuyerLoginView(AppContext app) {
+        this(app, Role.BUYER);
+    }
+
+    BuyerLoginView(AppContext app, Role role) {
         this.app = app;
+        this.role = role;
     }
 
     /** @return the screen */
@@ -40,8 +46,9 @@ public class BuyerLoginView {
         login.setMaxWidth(Double.MAX_VALUE);
         login.setOnAction(e -> {
             try {
-                User user = app.marketplace().auth().login(username.getText(), password.getText(), Role.BUYER);
-                app.enterBuyerPortal(user);
+                User user = app.marketplace().auth().login(username.getText(), password.getText(), role);
+                if (role == Role.ADMIN) app.enterAdminPortal(user);
+                else app.enterBuyerPortal(user);
             } catch (RuntimeException ex) {
                 error.setText(ex.getMessage());
                 password.clear();
@@ -52,9 +59,10 @@ public class BuyerLoginView {
         Button back = new Button("Back");
         back.setOnAction(e -> app.showWelcome());
 
-        VBox card = new VBox(12, Ui.title("Buyer login"), Ui.muted("Log in with your buyer account."),
+        String heading = role == Role.ADMIN ? "Admin login" : "Buyer login";
+        VBox card = new VBox(12, Ui.title(heading), Ui.muted(role == Role.ADMIN ? "Sign in with your administrator account." : "Log in with your buyer account."),
                 new Label("Username"), username, new Label("Password"), password, error, login,
-                new HBox(10, back, register));
+                role == Role.ADMIN ? back : new HBox(10, back, register));
         card.getStyleClass().add("card");
         card.setMaxWidth(380);
         card.setPadding(new Insets(32));

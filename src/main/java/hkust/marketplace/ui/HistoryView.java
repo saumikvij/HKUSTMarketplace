@@ -89,7 +89,7 @@ public class HistoryView implements Page {
         table.getColumns().add(col("Amount / period", 220, this::terms));
         table.getColumns().add(col("Outcome", 110, d -> d.getStatus().label()));
         table.getColumns().add(col("Your rating", 100, d -> review(d)
-                .map(r -> "★".repeat(r.getRating()) + "☆".repeat(5 - r.getRating())).orElse("Not rated")));
+                .map(r -> r.isHidden() ? "Hidden by admin" : "★".repeat(r.getRating()) + "☆".repeat(5 - r.getRating())).orElse("Not rated")));
         table.setPlaceholder(new Label("No finished deals found."));
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         table.getSelectionModel().selectedItemProperty().addListener((o, x, y) -> updateButtons());
@@ -152,6 +152,7 @@ public class HistoryView implements Page {
             sb.append("Meet-up: ").append(l.getMeetupLocation()).append('\n');
         }
         review(d).ifPresentOrElse(r -> {
+            if (r.isHidden()) { sb.append("\nYour review was hidden by an administrator."); return; }
             sb.append("\nYour review: ").append("★".repeat(r.getRating())).append('\n').append(r.getComment());
             if (r.getSellerReply() != null) {
                 sb.append("\nSeller reply: ").append(r.getSellerReply());

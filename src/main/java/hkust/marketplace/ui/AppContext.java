@@ -47,6 +47,21 @@ public class AppContext {
         setRoot(new BuyerLoginView(this).build());
     }
 
+    /** Opens the login-only admin entry point and clears the previous session. */
+    public void showAdminLogin() {
+        portal = null;
+        currentUser = null;
+        setRoot(new BuyerLoginView(this, hkust.marketplace.model.Role.ADMIN).build());
+    }
+
+    /** Opens the management dashboard after verifying the signed-in administrator. */
+    public void enterAdminPortal(User user) {
+        marketplace.admin().syncPendingAlerts(user.getId());
+        currentUser = user;
+        portal = null;
+        setRoot(new AdminPortal(this).build());
+    }
+
     /** Shows the buyer registration form. */
     public void showBuyerRegister() {
         setRoot(new BuyerRegisterView(this).build());

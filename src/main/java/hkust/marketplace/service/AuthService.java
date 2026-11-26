@@ -70,6 +70,8 @@ public class AuthService {
                     PasswordHasher.hash(password, salt), salt, LocalDateTime.now(clock),
                     isBlank(residenceHall) ? null : residenceHall.trim());
             store.putUser(buyer);
+            new NotificationService(store, clock).notifyAdmins(hkust.marketplace.model.NotificationCategory.ACCOUNT,
+                    "Buyer registered", buyer.getUsername() + " registered a buyer account.", buyer.getId());
             store.commit();
             return buyer;
         }
@@ -89,7 +91,7 @@ public class AuthService {
             throw new ValidationException("Username and password are both required");
         }
         User user = store.findUserByUsername(username).orElse(null);
-        if (user == null || !PasswordHasher.matches(password, user.getSalt(), user.getPasswordHash())) {
+        if (user == null || user.getStatus() == hkust.marketplace.model.AccountStatus.DELETED || !PasswordHasher.matches(password, user.getSalt(), user.getPasswordHash())) {
             throw new ValidationException("Invalid username or password");
         }
         if (user.getRole() != portal) {

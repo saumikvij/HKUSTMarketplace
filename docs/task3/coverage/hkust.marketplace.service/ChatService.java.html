@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ChatService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace – Buyer and Admin</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">ChatService.java</span></div><h1>ChatService.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import hkust.marketplace.data.DataStore;
+import hkust.marketplace.model.ChatMessage;
+import hkust.marketplace.model.ChatThread;
+import hkust.marketplace.model.Listing;
+import hkust.marketplace.model.ListingStatus;
+import hkust.marketplace.model.NotificationCategory;
+import hkust.marketplace.model.Role;
+import hkust.marketplace.model.User;
+import hkust.marketplace.util.Ids;
+import hkust.marketplace.util.MarketplaceException;
+import hkust.marketplace.util.ValidationException;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+/**
+ * Private chat linked to a listing (Task 1.5). There is one thread per buyer and listing, shared by the buyer
+ * and the seller. History is kept permanently and is searchable.
+ */
+public class ChatService {
+    /** Maximum message length. */
+    public static final int MAX_MESSAGE_LENGTH = 1000;
+
+    private final DataStore store;
+    private final Clock clock;
+    private final NotificationService notifications;
+
+    /** A message found by a chat search, with the thread it belongs to. */
+    public static final class SearchHit {
+        private final ChatThread thread;
+        private final ChatMessage message;
+
+<span class="fc" id="L40">        SearchHit(ChatThread thread, ChatMessage message) {</span>
+<span class="fc" id="L41">            this.thread = thread;</span>
+<span class="fc" id="L42">            this.message = message;</span>
+<span class="fc" id="L43">        }</span>
+
+        /** @return the thread containing the message */
+<span class="fc" id="L46">        public ChatThread getThread() { return thread; }</span>
+        /** @return the matching message */
+<span class="fc" id="L48">        public ChatMessage getMessage() { return message; }</span>
+    }
+
+    /**
+     * @param store data store
+     * @param clock clock
+     * @param notifications notification service
+     */
+<span class="fc" id="L56">    public ChatService(DataStore store, Clock clock, NotificationService notifications) {</span>
+<span class="fc" id="L57">        this.store = store;</span>
+<span class="fc" id="L58">        this.clock = clock;</span>
+<span class="fc" id="L59">        this.notifications = notifications;</span>
+<span class="fc" id="L60">    }</span>
+
+    /**
+     * Returns the buyer's thread for a listing, creating it if none exists.
+     * @param buyerId buyer
+     * @param listingId listing
+     * @return the thread
+     */
+    public ChatThread openThread(String buyerId, String listingId) {
+<span class="fc" id="L69">        Access.requireBuyer(store, buyerId);</span>
+<span class="fc" id="L70">        Listing listing = store.findListing(listingId)</span>
+<span class="fc" id="L71">                .orElseThrow(() -&gt; new MarketplaceException(&quot;Listing not found.&quot;));</span>
+<span class="fc" id="L72">        synchronized (store) {</span>
+<span class="fc" id="L73">            Optional&lt;ChatThread&gt; existing = findThread(buyerId, listingId);</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">            if (existing.isPresent()) {</span>
+<span class="fc" id="L75">                return existing.get();</span>
+            }
+<span class="fc" id="L77">            ChatThread thread = new ChatThread(Ids.next(&quot;C&quot;), buyerId, listing.getSellerId(), listingId);</span>
+<span class="fc" id="L78">            store.putThread(thread);</span>
+<span class="fc" id="L79">            store.commit();</span>
+<span class="fc" id="L80">            return thread;</span>
+        }
+    }
+
+    /**
+     * @param buyerId buyer
+     * @param listingId listing
+     * @return the existing thread, if any
+     */
+    public Optional&lt;ChatThread&gt; findThread(String buyerId, String listingId) {
+<span class="fc" id="L90">        return store.threads().stream()</span>
+<span class="fc bfc" id="L91" title="All 4 branches covered.">                .filter(t -&gt; t.getBuyerId().equals(buyerId) &amp;&amp; t.getListingId().equals(listingId))</span>
+<span class="fc" id="L92">                .findFirst();</span>
+    }
+
+    /**
+     * @param userId a buyer or seller
+     * @return all threads the user takes part in
+     */
+    public List&lt;ChatThread&gt; threadsFor(String userId) {
+<span class="fc" id="L100">        return store.threads().stream().filter(t -&gt; t.hasParticipant(userId)).collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Explains why a thread is read-only, if it is.
+     * @param thread thread
+     * @return the reason, or empty if new messages are allowed
+     */
+    public Optional&lt;String&gt; readOnlyReason(ChatThread thread) {
+<span class="fc" id="L109">        Listing listing = store.findListing(thread.getListingId()).orElse(null);</span>
+<span class="fc bfc" id="L110" title="All 4 branches covered.">        if (listing == null || listing.getStatus() == ListingStatus.REMOVED) {</span>
+<span class="fc" id="L111">            return Optional.of(&quot;This listing was removed. The chat is read-only.&quot;);</span>
+        }
+<span class="fc" id="L113">        boolean sellerActive = store.findUser(thread.getSellerId()).map(User::isActive).orElse(false);</span>
+<span class="fc" id="L114">        boolean buyerActive = store.findUser(thread.getBuyerId()).map(User::isActive).orElse(false);</span>
+<span class="fc bfc" id="L115" title="All 4 branches covered.">        if (!sellerActive || !buyerActive) {</span>
+<span class="fc" id="L116">            return Optional.of(&quot;The other account is no longer active. The chat is read-only.&quot;);</span>
+        }
+<span class="fc" id="L118">        return Optional.empty();</span>
+    }
+
+    /**
+     * Sends a free-text message and notifies the other participant.
+     * @param threadId thread
+     * @param senderId buyer or seller of the thread
+     * @param text 1 to 1,000 characters, not only spaces
+     * @return the stored message
+     * @throws ValidationException if the text is empty or too long
+     * @throws MarketplaceException if the sender is not in the thread or the thread is read-only
+     */
+    public ChatMessage send(String threadId, String senderId, String text) {
+<span class="fc" id="L131">        ChatThread thread = store.findThread(threadId)</span>
+<span class="fc" id="L132">                .orElseThrow(() -&gt; new MarketplaceException(&quot;Chat not found.&quot;));</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">        if (!thread.hasParticipant(senderId)) {</span>
+<span class="fc" id="L134">            throw new MarketplaceException(&quot;You are not part of this chat.&quot;);</span>
+        }
+<span class="fc" id="L136">        Optional&lt;String&gt; readOnly = readOnlyReason(thread);</span>
+<span class="fc bfc" id="L137" title="All 2 branches covered.">        if (readOnly.isPresent()) {</span>
+<span class="fc" id="L138">            throw new MarketplaceException(readOnly.get());</span>
+        }
+<span class="fc bfc" id="L140" title="All 4 branches covered.">        if (text == null || text.isBlank()) {</span>
+<span class="fc" id="L141">            throw new ValidationException(&quot;Message cannot be empty&quot;);</span>
+        }
+<span class="fc bfc" id="L143" title="All 2 branches covered.">        if (text.length() &gt; MAX_MESSAGE_LENGTH) {</span>
+<span class="fc" id="L144">            throw new ValidationException(&quot;Message must be at most &quot; + MAX_MESSAGE_LENGTH + &quot; characters&quot;);</span>
+        }
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        Role role = thread.getBuyerId().equals(senderId) ? Role.BUYER : Role.SELLER;</span>
+<span class="fc" id="L147">        ChatMessage message = new ChatMessage(senderId, role, text, LocalDateTime.now(clock), null);</span>
+<span class="fc" id="L148">        synchronized (store) {</span>
+<span class="fc" id="L149">            thread.getMessages().add(message);</span>
+<span class="fc" id="L150">        }</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">        String recipient = role == Role.BUYER ? thread.getSellerId() : thread.getBuyerId();</span>
+<span class="fc" id="L152">        String sender = store.findUser(senderId).map(User::getFullName).orElse(&quot;Someone&quot;);</span>
+<span class="fc" id="L153">        notifications.notify(recipient, NotificationCategory.MESSAGES, &quot;New message from &quot; + sender,</span>
+<span class="fc" id="L154">                preview(text), thread.getId());</span>
+<span class="fc" id="L155">        store.commit();</span>
+<span class="fc" id="L156">        return message;</span>
+    }
+
+    /**
+     * Adds a formal offer card (an offer, borrow request, claim or counter-offer) to the thread.
+     * @param thread thread
+     * @param senderId sender
+     * @param senderRole sender role
+     * @param text card text
+     * @param dealId linked deal
+     */
+    void postOfferCard(ChatThread thread, String senderId, Role senderRole, String text, String dealId) {
+<span class="fc" id="L168">        synchronized (store) {</span>
+<span class="fc" id="L169">            thread.getMessages().add(new ChatMessage(senderId, senderRole, text, LocalDateTime.now(clock), dealId));</span>
+<span class="fc" id="L170">        }</span>
+<span class="fc" id="L171">    }</span>
+
+    /**
+     * Searches chat history, ignoring case.
+     * @param userId the searching user (only their own threads are searched)
+     * @param keyword keyword, not blank
+     * @param threadId search only this thread, or null for all the user's threads
+     * @return matching messages, oldest first
+     * @throws ValidationException if the keyword is blank
+     */
+    public List&lt;SearchHit&gt; search(String userId, String keyword, String threadId) {
+<span class="fc bfc" id="L182" title="All 4 branches covered.">        if (keyword == null || keyword.isBlank()) {</span>
+<span class="fc" id="L183">            throw new ValidationException(&quot;Please enter a keyword to search&quot;);</span>
+        }
+<span class="fc" id="L185">        String key = keyword.trim().toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L186">        List&lt;SearchHit&gt; hits = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L187" title="All 2 branches covered.">        for (ChatThread thread : threadsFor(userId)) {</span>
+<span class="fc bfc" id="L188" title="All 4 branches covered.">            if (threadId != null &amp;&amp; !thread.getId().equals(threadId)) {</span>
+<span class="fc" id="L189">                continue;</span>
+            }
+<span class="fc bfc" id="L191" title="All 2 branches covered.">            for (ChatMessage m : thread.getMessages()) {</span>
+<span class="fc bfc" id="L192" title="All 2 branches covered.">                if (m.getText().toLowerCase(Locale.ROOT).contains(key)) {</span>
+<span class="fc" id="L193">                    hits.add(new SearchHit(thread, m));</span>
+                }
+<span class="fc" id="L195">            }</span>
+<span class="fc" id="L196">        }</span>
+<span class="fc" id="L197">        hits.sort(Comparator.comparing(h -&gt; h.getMessage().getSentAt()));</span>
+<span class="fc" id="L198">        return hits;</span>
+    }
+
+    private static String preview(String text) {
+<span class="fc bfc" id="L202" title="All 2 branches covered.">        return text.length() &lt;= 80 ? text : text.substring(0, 77) + &quot;...&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
