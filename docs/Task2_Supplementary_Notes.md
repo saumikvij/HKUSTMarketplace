@@ -79,13 +79,16 @@ and draft these notes.
 
 ## Seller Portal screenshots
 
+These screenshots were recaptured from the integrated build at commit `15e22d7`,
+including the redesigned theme and the seller Messages tab.
+
 | Subtask | Sample input or output |
 |---|---|
 | 2.1 | [Seller registration form](task2-screenshots/02-seller-registration.png) |
 | 2.2 | [Seller login form](task2-screenshots/01-seller-login.png) |
 | 2.3 | [HK$75.50 keyboard listing form](task2-screenshots/03-create-listing.png) |
 | 2.4 | [My Listings with the new item pending review](task2-screenshots/04-pending-listing.png) |
-| 2.5 | [Incoming HK$120 offer](task2-screenshots/05-pending-offer.png) and [HK$140 counter with seller message](task2-screenshots/06-counter-and-chat.png) |
+| 2.5 | [Incoming HK$120 offer](task2-screenshots/05-pending-offer.png) and [HK$140 counter with seller message](task2-screenshots/06-counter-and-chat.png). The [Messages tab](task2-screenshots/11-seller-messages.png) lists the conversation. |
 | 2.6 | [Updated seller profile](task2-screenshots/08-updated-profile.png) |
 | 2.7 | [Timestamped seller request notification](task2-screenshots/07-seller-notifications.png) |
 | 2.8 | [Seller totals, bar chart and pie chart](task2-screenshots/10-seller-stats.png) |
