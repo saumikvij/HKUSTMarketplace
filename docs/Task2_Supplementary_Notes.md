@@ -67,7 +67,25 @@ excludes JavaFX screens and the launch classes from the coverage calculation.
 See the [test report](task2-test-report/README.md) and
 [JaCoCo report](task2-coverage/index.html).
 
-The full JavaFX project compiled in the Maven test run. JavaFX screen
-screenshots and Task 3 integration checks are pending.
+The JavaFX smoke run in IntelliJ exercised seller registration, seller-only login,
+listing type selection and submission, a counter-offer, buyer–seller chat,
+the notification board, profile and password updates, review replies and flags,
+and both statistics charts. It used the demo accounts and an in-memory store.
+Task 3 integration checks are pending.
 AI assistance was used to implement and review Task 2, write regression tests,
 and draft these notes.
+
+
+## Seller Portal screenshots
+
+| Subtask | Sample input or output |
+|---|---|
+| 2.1 | [Seller registration form](task2-screenshots/02-seller-registration.png) |
+| 2.2 | [Seller login form](task2-screenshots/01-seller-login.png) |
+| 2.3 | [HK$75.50 keyboard listing form](task2-screenshots/03-create-listing.png) |
+| 2.4 | [My Listings with the new item pending review](task2-screenshots/04-pending-listing.png) |
+| 2.5 | [Incoming HK$120 offer](task2-screenshots/05-pending-offer.png) and [HK$140 counter with seller message](task2-screenshots/06-counter-and-chat.png) |
+| 2.6 | [Updated seller profile](task2-screenshots/08-updated-profile.png) |
+| 2.7 | [Timestamped seller request notification](task2-screenshots/07-seller-notifications.png) |
+| 2.8 | [Seller totals, bar chart and pie chart](task2-screenshots/10-seller-stats.png) |
+| 2.9 | [Review reply and moderation flag](task2-screenshots/09-review-reply-and-flag.png) |
