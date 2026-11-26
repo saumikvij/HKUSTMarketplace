@@ -49,6 +49,8 @@ There are 51 annotated screenshots in [Task1_Supplementary_Notes.pdf](docs/Task1
 - the notification board, deal history and filters, rate-and-review, and profile changes.
 
 ### Task 2 · Seller Portal (Aryan)
+Also see Aryan's screenshots for each subtask, 2.1 to 2.9, in [docs/task2-screenshots](docs/task2-screenshots). They are listed in his [supplementary notes](docs/Task2_Supplementary_Notes.md#seller-portal-screenshots).
+
 | Screen | Sample input → output |
 |---|---|
 | ![](docs/final/screenshots/task2-seller/s02_seller_register_validation.png) | Register with every field empty → every problem is listed |

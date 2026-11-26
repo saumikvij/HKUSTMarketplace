@@ -71,7 +71,8 @@ The JavaFX smoke run in IntelliJ exercised seller registration, seller-only logi
 listing type selection and submission, a counter-offer, buyer–seller chat,
 the notification board, profile and password updates, review replies and flags,
 and both statistics charts. It used the demo accounts and an in-memory store.
-Task 3 integration checks are pending.
+Integration with the Buyer and Admin portals was verified after the merge: see
+[SUBMISSION.md](../SUBMISSION.md) for the combined test report (132 tests) and coverage report.
 AI assistance was used to implement and review Task 2, write regression tests,
 and draft these notes.
 
