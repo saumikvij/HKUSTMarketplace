@@ -68,10 +68,11 @@ Also see Aryan's screenshots for each subtask, 2.1 to 2.9, in [docs/task2-screen
 | ![](docs/final/screenshots/task2-seller/s19_seller_notifications.png) | Seller notifications · ![](docs/final/screenshots/task2-seller/s20_seller_profile.png) Seller profile |
 
 ### Task 3 · Admin Portal (Hasnain)
-Also see [docs/task3/README.md](docs/task3/README.md).
+These screens were captured from the running JavaFX app with the shared theme from commit [15e22d7](https://github.com/saumikvij/HKUSTMarketplace/commit/15e22d77f4ccc5531722b648437f69733cf72d89). The [Task 3 guide](docs/task3/README.md) includes a second approval walkthrough.
 
 | Screen | Sample input → output |
 |---|---|
+| ![](docs/final/screenshots/task3-admin/a01_admin_login.png) | Enter the seeded administrator credentials on the Admin login screen. |
 | ![](docs/final/screenshots/task3-admin/a02_review_queue.png) | The review queue with two pending listings |
 | ![](docs/final/screenshots/task3-admin/a03_approve_confirm.png) | Approve the keyboard → ![](docs/final/screenshots/task3-admin/a04_listing_approved.png) it goes live for buyers |
 | ![](docs/final/screenshots/task3-admin/a05_reject_with_reason.png) | Reject the monitor with the reason "Please add a real photo of the monitor." → ![](docs/final/screenshots/task3-admin/a06_listing_rejected.png) |
@@ -79,6 +80,7 @@ Also see [docs/task3/README.md](docs/task3/README.md).
 | ![](docs/final/screenshots/task3-admin/a09_users.png) | User management · ![](docs/final/screenshots/task3-admin/a10_add_account_dialog.png) adding an account |
 | ![](docs/final/screenshots/task3-admin/a11_all_deals.png) | Every deal in the system · ![](docs/final/screenshots/task3-admin/a13_seller_ratings.png) seller ratings |
 | ![](docs/final/screenshots/task3-admin/a12_admin_notifications.png) | Admin notifications: submissions, reports and new accounts |
+| ![](docs/final/screenshots/task3-admin/a14_admin_profile.png) | Open My profile to inspect the current name and password-change fields. |
 
 ### All three portals working together
 All three portals share one stylesheet (`src/main/resources/hkust/marketplace/ui/style.css`): warm paper backgrounds, ink text, coral actions, teal for prices and selection, and the bundled Manrope typeface. Buyers and sellers both have a **Messages** tab listing all their conversations (Task 1 screenshots 52–53, Task 2 screenshots s22–s23).
