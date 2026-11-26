@@ -1,0 +1,76 @@
+/* HKUST Marketplace shared stylesheet (Buyer, Seller and Admin portals). */
+.root {
+    -fx-font-family: "Segoe UI", "Helvetica Neue", "Arial", sans-serif;
+    -fx-font-size: 13px;
+    -fx-base: #f4f6fa;
+    -fx-accent: #003366;
+    -fx-focus-color: #1f5fa8;
+    -fx-faint-focus-color: #1f5fa822;
+}
+.app-root { -fx-background-color: #f4f6fa; }
+.label { -fx-text-fill: #1d2733; }
+
+.sidebar { -fx-background-color: #003366; }
+.brand { -fx-text-fill: #ffffff; -fx-font-size: 17px; -fx-font-weight: bold; }
+.sidebar-user { -fx-text-fill: #c9d6ea; -fx-padding: 4 0 12 0; }
+.menu-item {
+    -fx-background-color: transparent; -fx-text-fill: #e6edf7; -fx-alignment: center-left;
+    -fx-padding: 9 12 9 12; -fx-background-radius: 6; -fx-cursor: hand;
+}
+.menu-item:hover { -fx-background-color: #1a4a7a; }
+.menu-selected { -fx-background-color: #b8862b; -fx-text-fill: #ffffff; -fx-font-weight: bold; }
+.menu-selected:hover { -fx-background-color: #b8862b; }
+
+.page-title { -fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #0f2340; }
+.hero-title { -fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #003366; }
+.section-title { -fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #0f2340; }
+.muted { -fx-text-fill: #5f6b7a; }
+.field-label { -fx-font-weight: bold; -fx-text-fill: #33404f; }
+.error-text { -fx-text-fill: #b3261e; -fx-font-weight: bold; }
+
+.button { -fx-background-radius: 6; -fx-padding: 6 14 6 14; -fx-cursor: hand; }
+.button.primary { -fx-background-color: #003366; -fx-text-fill: white; -fx-font-weight: bold; }
+.button.primary:hover { -fx-background-color: #1f5fa8; }
+.button.primary:disabled { -fx-opacity: 0.45; }
+.danger-link { -fx-background-color: transparent; -fx-text-fill: #b3261e; -fx-underline: true; }
+
+.card {
+    -fx-background-color: white; -fx-background-radius: 10; -fx-border-radius: 10;
+    -fx-border-color: #dde3ec; -fx-effect: dropshadow(gaussian, rgba(15,35,64,0.08), 8, 0, 0, 2);
+}
+.listing-card:hover { -fx-border-color: #1f5fa8; }
+.card-title { -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #0f2340; }
+.price { -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #0b6b3a; }
+.price-large { -fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #0b6b3a; }
+.stars { -fx-text-fill: #d49a00; -fx-font-size: 16px; }
+.reply { -fx-background-color: #eef3fa; -fx-padding: 6 8 6 8; -fx-background-radius: 6; }
+
+.badge { -fx-padding: 2 8 2 8; -fx-background-radius: 10; -fx-font-size: 11px; -fx-font-weight: bold; }
+.badge-sell { -fx-background-color: #dbe8fb; -fx-text-fill: #1f4f8f; }
+.badge-lend { -fx-background-color: #efe0fa; -fx-text-fill: #6a2c91; }
+.badge-giveaway { -fx-background-color: #d9f2e3; -fx-text-fill: #0b6b3a; }
+.badge-ok { -fx-background-color: #d9f2e3; -fx-text-fill: #0b6b3a; }
+.badge-warn { -fx-background-color: #fff0cc; -fx-text-fill: #7a5200; }
+.badge-info { -fx-background-color: #e4e9f1; -fx-text-fill: #33404f; }
+
+.photo-frame { -fx-background-color: #eef1f6; -fx-background-radius: 8; }
+.photo-placeholder { -fx-background-color: #e4e9f1; -fx-background-radius: 8; }
+
+.plain-scroll { -fx-background-color: transparent; -fx-background: #f4f6fa; -fx-padding: 0; }
+.plain-scroll > .viewport { -fx-background-color: transparent; }
+.detail-root { -fx-background: #ffffff; -fx-background-color: #ffffff; }
+
+.bubble-mine { -fx-background-color: #003366; -fx-background-radius: 12; -fx-padding: 8 10 8 10; }
+.bubble-mine .label { -fx-text-fill: white; }
+.bubble-mine .muted { -fx-text-fill: #c9d6ea; }
+.bubble-theirs { -fx-background-color: white; -fx-border-color: #dde3ec; -fx-background-radius: 12;
+    -fx-border-radius: 12; -fx-padding: 8 10 8 10; }
+.offer-card { -fx-background-color: #fff6df; -fx-border-color: #b8862b; -fx-border-width: 1.5;
+    -fx-background-radius: 10; -fx-border-radius: 10; -fx-padding: 8 10 8 10; }
+
+.notif-title { -fx-text-fill: #33404f; }
+.notif-title-unread { -fx-text-fill: #0f2340; -fx-font-weight: bold; }
+
+.table-view { -fx-background-color: white; -fx-background-radius: 8; }
+.table-view .column-header { -fx-font-weight: bold; }
+.tab-pane .tab:selected { -fx-background-color: white; }

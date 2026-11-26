@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DealType.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace - Task 1 Buyer Portal</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.model</a> &gt; <span class="el_source">DealType.java</span></div><h1>DealType.java</h1><pre class="source lang-java linenums">package hkust.marketplace.model;
+
+/** What a buyer asked for: one deal type per listing type. */
+<span class="fc" id="L4">public enum DealType {</span>
+    /** Price offer on a Sell listing (&quot;Bought&quot; in history). */
+<span class="fc" id="L6">    OFFER(&quot;Buy&quot;, &quot;Bought&quot;),</span>
+    /** Borrow request on a Lend listing (&quot;Borrowed&quot; in history). */
+<span class="fc" id="L8">    BORROW(&quot;Borrow&quot;, &quot;Borrowed&quot;),</span>
+    /** Claim on a Giveaway listing (&quot;Received&quot; in history). */
+<span class="fc" id="L10">    CLAIM(&quot;Claim&quot;, &quot;Received&quot;);</span>
+
+    private final String label;
+    private final String historyLabel;
+
+<span class="fc" id="L15">    DealType(String label, String historyLabel) {</span>
+<span class="fc" id="L16">        this.label = label;</span>
+<span class="fc" id="L17">        this.historyLabel = historyLabel;</span>
+<span class="fc" id="L18">    }</span>
+
+    /** @return the name shown in My Deals */
+<span class="fc" id="L21">    public String label() { return label; }</span>
+
+    /** @return the name shown in Deal History (Bought / Borrowed / Received) */
+<span class="fc" id="L24">    public String historyLabel() { return historyLabel; }</span>
+
+    /**
+     * Returns the deal type that matches a listing type.
+     * @param type the listing type
+     * @return OFFER for SELL, BORROW for LEND, CLAIM for GIVEAWAY
+     */
+    public static DealType forListingType(ListingType type) {
+<span class="fc bfc" id="L32" title="All 3 branches covered.">        switch (type) {</span>
+<span class="fc" id="L33">            case SELL: return OFFER;</span>
+<span class="fc" id="L34">            case LEND: return BORROW;</span>
+<span class="fc" id="L35">            default: return CLAIM;</span>
+        }
+    }
+
+<span class="fc" id="L39">    @Override public String toString() { return label; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

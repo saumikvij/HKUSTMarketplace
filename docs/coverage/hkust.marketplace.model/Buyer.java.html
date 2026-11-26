@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Buyer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace - Task 1 Buyer Portal</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.model</a> &gt; <span class="el_source">Buyer.java</span></div><h1>Buyer.java</h1><pre class="source lang-java linenums">package hkust.marketplace.model;
+
+import java.time.LocalDateTime;
+
+/** A student or staff member using the buyer portal (Task 1). */
+public class Buyer extends User {
+    private static final long serialVersionUID = 1L;
+
+    private String residenceHall;
+
+    /**
+     * Creates a buyer.
+     * @param id unique id
+     * @param username unique username
+     * @param fullName display name
+     * @param passwordHash salted password hash
+     * @param salt salt
+     * @param registeredAt registration time
+     * @param residenceHall residence hall or &quot;Off-campus&quot;; may be null
+     */
+    public Buyer(String id, String username, String fullName, String passwordHash, String salt,
+                 LocalDateTime registeredAt, String residenceHall) {
+<span class="fc" id="L23">        super(id, username, fullName, passwordHash, salt, registeredAt);</span>
+<span class="fc" id="L24">        this.residenceHall = residenceHall;</span>
+<span class="fc" id="L25">    }</span>
+
+<span class="fc" id="L27">    @Override public Role getRole() { return Role.BUYER; }</span>
+
+    /** @return residence hall, &quot;Off-campus&quot;, or null if not given (used for meet-up suggestions) */
+<span class="fc" id="L30">    public String getResidenceHall() { return residenceHall; }</span>
+    /** @param residenceHall new residence hall, or null */
+<span class="fc" id="L32">    public void setResidenceHall(String residenceHall) { this.residenceHall = residenceHall; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

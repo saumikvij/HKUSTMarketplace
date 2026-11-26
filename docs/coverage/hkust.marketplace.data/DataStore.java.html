@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DataStore.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace - Task 1 Buyer Portal</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.data</a> &gt; <span class="el_source">DataStore.java</span></div><h1>DataStore.java</h1><pre class="source lang-java linenums">package hkust.marketplace.data;
+
+import hkust.marketplace.model.ChatThread;
+import hkust.marketplace.model.Deal;
+import hkust.marketplace.model.Listing;
+import hkust.marketplace.model.Notification;
+import hkust.marketplace.model.Report;
+import hkust.marketplace.model.Review;
+import hkust.marketplace.model.User;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * In-memory store for every record, saved to one file so data survives restarts.
+ * Services lock on the store ({@code synchronized (store)}) for actions that must be atomic,
+ * such as two buyers claiming the same giveaway.
+ */
+public class DataStore implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+<span class="fc" id="L34">    private final Map&lt;String, User&gt; users = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L35">    private final Map&lt;String, Listing&gt; listings = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L36">    private final Map&lt;String, Deal&gt; deals = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L37">    private final Map&lt;String, Review&gt; reviews = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L38">    private final Map&lt;String, ChatThread&gt; threads = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L39">    private final Map&lt;String, Notification&gt; notifications = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L40">    private final Map&lt;String, Report&gt; reports = new LinkedHashMap&lt;&gt;();</span>
+
+    private transient Path file;
+
+    /** Creates an empty in-memory store that is never saved (used by tests). */
+<span class="fc" id="L45">    public DataStore() { }</span>
+
+    /**
+     * Loads the store from a file, or returns an empty store bound to that file if it does not exist.
+     * @param file data file
+     * @return the loaded store
+     * @throws IOException if the file exists but cannot be read
+     */
+    public static DataStore load(Path file) throws IOException {
+        DataStore store;
+<span class="fc bfc" id="L55" title="All 2 branches covered.">        if (Files.exists(file)) {</span>
+<span class="fc" id="L56">            try (InputStream in = Files.newInputStream(file); ObjectInputStream ois = new ObjectInputStream(in)) {</span>
+<span class="fc" id="L57">                store = (DataStore) ois.readObject();</span>
+<span class="fc" id="L58">            } catch (ClassNotFoundException | ClassCastException e) {</span>
+<span class="fc" id="L59">                throw new IOException(&quot;Data file is not a marketplace data file: &quot; + file, e);</span>
+<span class="fc" id="L60">            }</span>
+        } else {
+<span class="fc" id="L62">            store = new DataStore();</span>
+        }
+<span class="fc" id="L64">        store.file = file;</span>
+<span class="fc" id="L65">        return store;</span>
+    }
+
+    /**
+     * Saves every record to the bound file (written to a temporary file first, then moved into place).
+     * Does nothing for a store without a file.
+     * @throws IOException if writing fails
+     */
+    public synchronized void save() throws IOException {
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        if (file == null) {</span>
+<span class="fc" id="L75">            return;</span>
+        }
+<span class="fc" id="L77">        Path parent = file.toAbsolutePath().getParent();</span>
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">        if (parent != null) {</span>
+<span class="fc" id="L79">            Files.createDirectories(parent);</span>
+        }
+<span class="fc" id="L81">        Path tmp = file.resolveSibling(file.getFileName() + &quot;.tmp&quot;);</span>
+<span class="fc" id="L82">        try (OutputStream out = Files.newOutputStream(tmp); ObjectOutputStream oos = new ObjectOutputStream(out)) {</span>
+<span class="fc" id="L83">            oos.writeObject(this);</span>
+        }
+<span class="fc" id="L85">        Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);</span>
+<span class="fc" id="L86">    }</span>
+
+    /**
+     * Saves the store, turning an I/O failure into an unchecked exception (used after every change).
+     * @throws java.io.UncheckedIOException if the data cannot be written
+     */
+    public void commit() {
+        try {
+<span class="fc" id="L94">            save();</span>
+<span class="fc" id="L95">        } catch (IOException e) {</span>
+<span class="fc" id="L96">            throw new java.io.UncheckedIOException(&quot;Could not save data: &quot; + e.getMessage(), e);</span>
+<span class="fc" id="L97">        }</span>
+<span class="fc" id="L98">    }</span>
+
+    /** @return the bound data file, or null for an in-memory store */
+<span class="fc" id="L101">    public Path getFile() { return file; }</span>
+
+    /** @return true if nothing has been stored yet */
+<span class="fc" id="L104">    public synchronized boolean isEmpty() { return users.isEmpty(); }</span>
+
+    // ---------- users ----------
+
+    /** @param user user to add or replace */
+<span class="fc" id="L109">    public synchronized void putUser(User user) { users.put(user.getId(), user); }</span>
+
+    /**
+     * @param id user id
+     * @return the user, if any
+     */
+<span class="fc" id="L115">    public synchronized Optional&lt;User&gt; findUser(String id) { return Optional.ofNullable(users.get(id)); }</span>
+
+    /**
+     * Finds a user by username, ignoring case and outer spaces (usernames are unique across all roles).
+     * @param username username
+     * @return the user, if any
+     */
+    public synchronized Optional&lt;User&gt; findUserByUsername(String username) {
+<span class="fc bfc" id="L123" title="All 2 branches covered.">        if (username == null) {</span>
+<span class="fc" id="L124">            return Optional.empty();</span>
+        }
+<span class="fc" id="L126">        String key = username.trim().toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L127">        return users.values().stream()</span>
+<span class="fc" id="L128">                .filter(u -&gt; u.getUsername().toLowerCase(Locale.ROOT).equals(key))</span>
+<span class="fc" id="L129">                .findFirst();</span>
+    }
+
+    /** @return a snapshot of all users */
+<span class="fc" id="L133">    public synchronized List&lt;User&gt; users() { return new ArrayList&lt;&gt;(users.values()); }</span>
+
+    // ---------- listings ----------
+
+    /** @param listing listing to add or replace */
+<span class="fc" id="L138">    public synchronized void putListing(Listing listing) { listings.put(listing.getId(), listing); }</span>
+
+    /**
+     * @param id listing id
+     * @return the listing, if any
+     */
+<span class="fc" id="L144">    public synchronized Optional&lt;Listing&gt; findListing(String id) { return Optional.ofNullable(listings.get(id)); }</span>
+
+    /** @return a snapshot of all listings */
+<span class="fc" id="L147">    public synchronized List&lt;Listing&gt; listings() { return new ArrayList&lt;&gt;(listings.values()); }</span>
+
+    // ---------- deals ----------
+
+    /** @param deal deal to add or replace */
+<span class="fc" id="L152">    public synchronized void putDeal(Deal deal) { deals.put(deal.getId(), deal); }</span>
+
+    /**
+     * @param id deal id
+     * @return the deal, if any
+     */
+<span class="fc" id="L158">    public synchronized Optional&lt;Deal&gt; findDeal(String id) { return Optional.ofNullable(deals.get(id)); }</span>
+
+    /** @return a snapshot of all deals */
+<span class="fc" id="L161">    public synchronized List&lt;Deal&gt; deals() { return new ArrayList&lt;&gt;(deals.values()); }</span>
+
+    // ---------- reviews ----------
+
+    /** @param review review to add or replace */
+<span class="fc" id="L166">    public synchronized void putReview(Review review) { reviews.put(review.getId(), review); }</span>
+
+    /** @return a snapshot of all reviews */
+<span class="fc" id="L169">    public synchronized List&lt;Review&gt; reviews() { return new ArrayList&lt;&gt;(reviews.values()); }</span>
+
+    // ---------- chat ----------
+
+    /** @param thread thread to add or replace */
+<span class="fc" id="L174">    public synchronized void putThread(ChatThread thread) { threads.put(thread.getId(), thread); }</span>
+
+    /**
+     * @param id thread id
+     * @return the thread, if any
+     */
+<span class="fc" id="L180">    public synchronized Optional&lt;ChatThread&gt; findThread(String id) { return Optional.ofNullable(threads.get(id)); }</span>
+
+    /** @return a snapshot of all chat threads */
+<span class="fc" id="L183">    public synchronized List&lt;ChatThread&gt; threads() { return new ArrayList&lt;&gt;(threads.values()); }</span>
+
+    // ---------- notifications ----------
+
+    /** @param notification notification to add or replace */
+    public synchronized void putNotification(Notification notification) {
+<span class="fc" id="L189">        notifications.put(notification.getId(), notification);</span>
+<span class="fc" id="L190">    }</span>
+
+    /** @return a snapshot of all notifications */
+<span class="fc" id="L193">    public synchronized List&lt;Notification&gt; notifications() { return new ArrayList&lt;&gt;(notifications.values()); }</span>
+
+    // ---------- reports ----------
+
+    /** @param report report to add or replace */
+<span class="fc" id="L198">    public synchronized void putReport(Report report) { reports.put(report.getId(), report); }</span>
+
+    /** @return a snapshot of all reports */
+<span class="fc" id="L201">    public synchronized List&lt;Report&gt; reports() { return new ArrayList&lt;&gt;(reports.values()); }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

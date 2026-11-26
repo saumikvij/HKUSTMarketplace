@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ChatThread.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace - Task 1 Buyer Portal</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.model</a> &gt; <span class="el_source">ChatThread.java</span></div><h1>ChatThread.java</h1><pre class="source lang-java linenums">package hkust.marketplace.model;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+/** The one private chat between a buyer and the seller of a listing. History is kept permanently. */
+public class ChatThread implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final String id;
+    private final String buyerId;
+    private final String sellerId;
+    private final String listingId;
+<span class="fc" id="L15">    private final List&lt;ChatMessage&gt; messages = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * Creates an empty thread.
+     * @param id unique id
+     * @param buyerId buyer
+     * @param sellerId seller of the listing
+     * @param listingId listing the chat is about
+     */
+<span class="fc" id="L24">    public ChatThread(String id, String buyerId, String sellerId, String listingId) {</span>
+<span class="fc" id="L25">        this.id = id;</span>
+<span class="fc" id="L26">        this.buyerId = buyerId;</span>
+<span class="fc" id="L27">        this.sellerId = sellerId;</span>
+<span class="fc" id="L28">        this.listingId = listingId;</span>
+<span class="fc" id="L29">    }</span>
+
+    /** @return unique id */
+<span class="fc" id="L32">    public String getId() { return id; }</span>
+    /** @return buyer id */
+<span class="fc" id="L34">    public String getBuyerId() { return buyerId; }</span>
+    /** @return seller id */
+<span class="fc" id="L36">    public String getSellerId() { return sellerId; }</span>
+    /** @return listing id */
+<span class="fc" id="L38">    public String getListingId() { return listingId; }</span>
+    /** @return messages in time order (modifiable) */
+<span class="fc" id="L40">    public List&lt;ChatMessage&gt; getMessages() { return messages; }</span>
+    /**
+     * @param userId a user id
+     * @return true if the user is the buyer or the seller of this thread
+     */
+    public boolean hasParticipant(String userId) {
+<span class="fc bfc" id="L46" title="All 4 branches covered.">        return buyerId.equals(userId) || sellerId.equals(userId);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

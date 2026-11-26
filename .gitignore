@@ -1,0 +1,7 @@
+target/
+*.iml
+.idea/
+out/
+marketplace-data.ser
+marketplace-data.ser.tmp
+.DS_Store
