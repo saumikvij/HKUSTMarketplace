@@ -50,6 +50,10 @@ The sources and tests were compiled with the installed Java 21 and JavaFX runtim
 
 ### Execution screenshots
 
+All four screens below were captured from the running shared-theme build at [15e22d7](https://github.com/saumikvij/HKUSTMarketplace/commit/15e22d77f4ccc5531722b648437f69733cf72d89). This walkthrough uses a fresh copy of the seeded demo. After the administrator approved the pending monitor, the review queue cleared and the Buyer search returned one result at HK$600.
+
+The [integrated Admin walkthrough](../../SUBMISSION.md#task-3--admin-portal-hasnain) uses a separate demo session with two pending listings. It shows the keyboard approval, the monitor rejection with a reason, and the [Buyer's search for the approved keyboard](../final/screenshots/integration/b01_buyer_sees_approved_listing.png).
+
 | Admin input | Observed output |
 | --- | --- |
 | Select the pending monitor | [Review queue with approval controls](01-admin-queue.png) |
