@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Deal.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace – Buyer and Admin</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.model</a> &gt; <span class="el_source">Deal.java</span></div><h1>Deal.java</h1><pre class="source lang-java linenums">package hkust.marketplace.model;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * A buyer's offer, borrow request or claim on one listing, from submission until it is finished.
+ * The record of all deals and each buyer's deal history are deals with a finished status.
+ */
+public class Deal implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final String id;
+    private final String buyerId;
+    private final String listingId;
+    private final DealType type;
+<span class="fc" id="L18">    private DealStatus status = DealStatus.PENDING;</span>
+    private BigDecimal offeredPrice;
+    private BigDecimal counterPrice;
+    private LocalDateTime borrowStart;
+    private LocalDateTime borrowEnd;
+    private LocalDateTime counterStart;
+    private LocalDateTime counterEnd;
+    private String message;
+    private final LocalDateTime submittedAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime completedAt;
+    private boolean reminderSent;
+
+    /**
+     * Creates a pending deal.
+     * @param id unique id
+     * @param buyerId buyer who made it
+     * @param listingId listing it is for
+     * @param type offer, borrow or claim
+     * @param submittedAt submission time
+     */
+<span class="fc" id="L39">    public Deal(String id, String buyerId, String listingId, DealType type, LocalDateTime submittedAt) {</span>
+<span class="fc" id="L40">        this.id = id;</span>
+<span class="fc" id="L41">        this.buyerId = buyerId;</span>
+<span class="fc" id="L42">        this.listingId = listingId;</span>
+<span class="fc" id="L43">        this.type = type;</span>
+<span class="fc" id="L44">        this.submittedAt = submittedAt;</span>
+<span class="fc" id="L45">        this.updatedAt = submittedAt;</span>
+<span class="fc" id="L46">    }</span>
+
+    /** @return unique id */
+<span class="fc" id="L49">    public String getId() { return id; }</span>
+    /** @return buyer id */
+<span class="fc" id="L51">    public String getBuyerId() { return buyerId; }</span>
+    /** @return listing id */
+<span class="fc" id="L53">    public String getListingId() { return listingId; }</span>
+    /** @return deal type */
+<span class="fc" id="L55">    public DealType getType() { return type; }</span>
+    /** @return current status */
+<span class="fc" id="L57">    public DealStatus getStatus() { return status; }</span>
+    /**
+     * Changes the status and records the time.
+     * @param status new status
+     * @param at time of the change
+     */
+    public void setStatus(DealStatus status, LocalDateTime at) {
+<span class="fc" id="L64">        this.status = status;</span>
+<span class="fc" id="L65">        this.updatedAt = at;</span>
+<span class="fc" id="L66">    }</span>
+    /** @return offered price for an offer, or null */
+<span class="fc" id="L68">    public BigDecimal getOfferedPrice() { return offeredPrice; }</span>
+    /** @param price offered price */
+<span class="fc" id="L70">    public void setOfferedPrice(BigDecimal price) { this.offeredPrice = price; }</span>
+    /** @return seller's counter price, or null */
+<span class="nc" id="L72">    public BigDecimal getCounterPrice() { return counterPrice; }</span>
+    /** @param price counter price */
+<span class="fc" id="L74">    public void setCounterPrice(BigDecimal price) { this.counterPrice = price; }</span>
+    /** @return agreed or proposed borrowing start, or null */
+<span class="fc" id="L76">    public LocalDateTime getBorrowStart() { return borrowStart; }</span>
+    /** @return agreed or proposed borrowing end (the due time), or null */
+<span class="fc" id="L78">    public LocalDateTime getBorrowEnd() { return borrowEnd; }</span>
+    /**
+     * Sets the borrowing period.
+     * @param start start time
+     * @param end end (due) time
+     */
+    public void setBorrowPeriod(LocalDateTime start, LocalDateTime end) {
+<span class="fc" id="L85">        this.borrowStart = start;</span>
+<span class="fc" id="L86">        this.borrowEnd = end;</span>
+<span class="fc" id="L87">    }</span>
+    /** @return seller's counter start, or null */
+<span class="fc" id="L89">    public LocalDateTime getCounterStart() { return counterStart; }</span>
+    /** @return seller's counter end, or null */
+<span class="fc" id="L91">    public LocalDateTime getCounterEnd() { return counterEnd; }</span>
+    /**
+     * Sets the seller's counter borrowing period.
+     * @param start counter start
+     * @param end counter end
+     */
+    public void setCounterPeriod(LocalDateTime start, LocalDateTime end) {
+<span class="fc" id="L98">        this.counterStart = start;</span>
+<span class="fc" id="L99">        this.counterEnd = end;</span>
+<span class="fc" id="L100">    }</span>
+    /** @return optional message from the buyer */
+<span class="fc" id="L102">    public String getMessage() { return message; }</span>
+    /** @param message optional message */
+<span class="fc" id="L104">    public void setMessage(String message) { this.message = message; }</span>
+    /** @return submission time */
+<span class="fc" id="L106">    public LocalDateTime getSubmittedAt() { return submittedAt; }</span>
+    /** @return last update time */
+<span class="fc" id="L108">    public LocalDateTime getUpdatedAt() { return updatedAt; }</span>
+    /** @return time the deal finished (completed or returned), or null */
+<span class="fc" id="L110">    public LocalDateTime getCompletedAt() { return completedAt; }</span>
+    /** @param at finish time */
+<span class="fc" id="L112">    public void setCompletedAt(LocalDateTime at) { this.completedAt = at; }</span>
+    /** @return true once the due-date reminder has been sent */
+<span class="fc" id="L114">    public boolean isReminderSent() { return reminderSent; }</span>
+    /** @param sent whether the due-date reminder has been sent */
+<span class="fc" id="L116">    public void setReminderSent(boolean sent) { this.reminderSent = sent; }</span>
+
+    /** @return the price the deal is at: the counter price if one exists, else the offered price */
+<span class="fc bfc" id="L119" title="All 2 branches covered.">    public BigDecimal getCurrentPrice() { return counterPrice != null ? counterPrice : offeredPrice; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

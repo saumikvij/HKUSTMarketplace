@@ -55,6 +55,8 @@ public class AuthService {
                     PasswordHasher.hash(password, salt), salt, LocalDateTime.now(clock),
                     isBlank(residenceHall) ? null : residenceHall.trim());
             store.putUser(buyer);
+            new NotificationService(store, clock).notifyAdmins(hkust.marketplace.model.NotificationCategory.ACCOUNT,
+                    "Buyer registered", buyer.getUsername() + " registered a buyer account.", buyer.getId());
             store.commit();
             return buyer;
         }
@@ -74,12 +76,12 @@ public class AuthService {
             throw new ValidationException("Username and password are both required");
         }
         User user = store.findUserByUsername(username).orElse(null);
-        if (user == null || !PasswordHasher.matches(password, user.getSalt(), user.getPasswordHash())) {
+        if (user == null || user.getStatus() == hkust.marketplace.model.AccountStatus.DELETED || !PasswordHasher.matches(password, user.getSalt(), user.getPasswordHash())) {
             throw new ValidationException("Invalid username or password");
         }
         if (user.getRole() != portal) {
             String role = user.getRole().name().toLowerCase(Locale.ROOT);
-            throw new MarketplaceException("This is a " + role + " account. Please use the " + role
+            throw new MarketplaceException("This is " + (user.getRole() == Role.ADMIN ? "an " : "a ") + role + " account. Please use the " + role
                     + " login screen.");
         }
         if (!user.isActive()) {
@@ -111,6 +113,8 @@ public class AuthService {
             }
             return store.transact(() -> {
                 store.putUser(seller);
+                new NotificationService(store, clock).notifyAdmins(hkust.marketplace.model.NotificationCategory.ACCOUNT,
+                        "Seller registered", seller.getUsername() + " registered a seller account.", seller.getId());
                 return seller;
             });
         }

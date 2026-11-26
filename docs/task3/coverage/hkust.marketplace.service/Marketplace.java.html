@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Marketplace.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace – Buyer and Admin</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">Marketplace.java</span></div><h1>Marketplace.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import hkust.marketplace.data.DataStore;
+import java.time.Clock;
+
+/**
+ * Creates and wires every service around one data store and clock. Screens get services from here, so the
+ * Seller (Task 2) and Admin (Task 3) portals share the same rules and data.
+ */
+public class Marketplace {
+    private final DataStore store;
+    private final Clock clock;
+    private final NotificationService notifications;
+    private final AuthService auth;
+    private final ProfileService profile;
+    private final ListingService listings;
+    private final ChatService chat;
+    private final DealService deals;
+    private final ReviewService reviews;
+    private final AdminService admin;
+
+    /**
+     * @param store data store
+     * @param clock clock (system clock in the app, a controllable clock in tests)
+     */
+<span class="fc" id="L26">    public Marketplace(DataStore store, Clock clock) {</span>
+<span class="fc" id="L27">        this.store = store;</span>
+<span class="fc" id="L28">        this.clock = clock;</span>
+<span class="fc" id="L29">        this.notifications = new NotificationService(store, clock);</span>
+<span class="fc" id="L30">        this.auth = new AuthService(store, clock);</span>
+<span class="fc" id="L31">        this.profile = new ProfileService(store);</span>
+<span class="fc" id="L32">        this.listings = new ListingService(store, clock, notifications);</span>
+<span class="fc" id="L33">        this.chat = new ChatService(store, clock, notifications);</span>
+<span class="fc" id="L34">        this.deals = new DealService(store, clock, notifications, chat);</span>
+<span class="fc" id="L35">        this.reviews = new ReviewService(store, clock, notifications);</span>
+<span class="fc" id="L36">        this.admin = new AdminService(this);</span>
+<span class="fc" id="L37">    }</span>
+
+    /** @return administrative operations on this marketplace */
+<span class="fc" id="L40">    public AdminService admin() { return admin; }</span>
+
+    /** @return the data store */
+<span class="fc" id="L43">    public DataStore store() { return store; }</span>
+    /** @return the clock */
+<span class="fc" id="L45">    public Clock clock() { return clock; }</span>
+    /** @return notification service (1.8) */
+<span class="fc" id="L47">    public NotificationService notifications() { return notifications; }</span>
+    /** @return registration and login (1.1, 1.2) */
+<span class="fc" id="L49">    public AuthService auth() { return auth; }</span>
+    /** @return profile editing (1.7) */
+<span class="fc" id="L51">    public ProfileService profile() { return profile; }</span>
+    /** @return browse and listing detail (1.3, 1.4) */
+<span class="fc" id="L53">    public ListingService listings() { return listings; }</span>
+    /** @return chat (1.5) */
+<span class="fc" id="L55">    public ChatService chat() { return chat; }</span>
+    /** @return offers, borrows, claims, My Deals and history (1.5, 1.6, 1.9) */
+<span class="fc" id="L57">    public DealService deals() { return deals; }</span>
+    /** @return ratings and reviews (1.10) */
+<span class="fc" id="L59">    public ReviewService reviews() { return reviews; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

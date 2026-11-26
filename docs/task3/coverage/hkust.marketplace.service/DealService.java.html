@@ -1,0 +1,734 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DealService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace – Buyer and Admin</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">DealService.java</span></div><h1>DealService.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import hkust.marketplace.data.DataStore;
+import hkust.marketplace.model.Buyer;
+import hkust.marketplace.model.ChatThread;
+import hkust.marketplace.model.Deal;
+import hkust.marketplace.model.DealStatus;
+import hkust.marketplace.model.DealType;
+import hkust.marketplace.model.Listing;
+import hkust.marketplace.model.ListingStatus;
+import hkust.marketplace.model.ListingType;
+import hkust.marketplace.model.NotificationCategory;
+import hkust.marketplace.model.Role;
+import hkust.marketplace.model.User;
+import hkust.marketplace.util.Ids;
+import hkust.marketplace.util.MarketplaceException;
+import hkust.marketplace.util.ValidationException;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+/**
+ * Offers, borrow requests and claims (Task 1.5), My Deals actions and auto-return (Task 1.6) and Deal History
+ * (Task 1.9). Every state change first re-checks the current status while holding the store lock, so two
+ * actions on the same listing at the same time cannot both succeed (e.g. only the first giveaway claim wins).
+ * &lt;p&gt;
+ * The seller-side methods ({@link #acceptDeal}, {@link #declineDeal}, {@link #counterOffer},
+ * {@link #counterBorrow}) hold the shared deal rules so the Seller Portal (Task 2) uses the same logic.
+ */
+public class DealService {
+    /** Shortest borrowing period allowed (5 seconds, for testing). */
+<span class="fc" id="L40">    public static final Duration MIN_BORROW = Duration.ofSeconds(5);</span>
+    /** How far in the past a borrow start may be (covers the time spent filling in the form). */
+<span class="fc" id="L42">    public static final Duration START_TOLERANCE = Duration.ofMinutes(1);</span>
+
+    private final DataStore store;
+    private final Clock clock;
+    private final NotificationService notifications;
+    private final ChatService chat;
+
+    /**
+     * @param store data store
+     * @param clock clock (a fixed or test clock makes due dates testable)
+     * @param notifications notification service
+     * @param chat chat service (offers appear as cards in the listing's chat)
+     */
+<span class="fc" id="L55">    public DealService(DataStore store, Clock clock, NotificationService notifications, ChatService chat) {</span>
+<span class="fc" id="L56">        this.store = store;</span>
+<span class="fc" id="L57">        this.clock = clock;</span>
+<span class="fc" id="L58">        this.notifications = notifications;</span>
+<span class="fc" id="L59">        this.chat = chat;</span>
+<span class="fc" id="L60">    }</span>
+
+    // =====================================================================
+    // Task 1.5: submit an offer, borrow request or claim
+    // =====================================================================
+
+    /**
+     * Makes a price offer on a Sell listing.
+     * @param buyerId buyer
+     * @param listingId a Live Sell listing
+     * @param priceText offer in HK$, greater than 0 with at most 2 decimal places
+     * @param message optional message to the seller
+     * @param replaceExisting true to replace the buyer's existing Pending/Countered request on this listing
+     * @return the new Pending deal
+     * @throws ValidationException if the price is invalid
+     * @throws MarketplaceException if the listing is no longer available or a request already exists
+     */
+    public Deal makeOffer(String buyerId, String listingId, String priceText, String message,
+                          boolean replaceExisting) {
+<span class="fc" id="L79">        Buyer buyer = Access.requireBuyer(store, buyerId);</span>
+<span class="fc" id="L80">        BigDecimal price = parseOfferPrice(priceText);</span>
+<span class="fc" id="L81">        synchronized (store) {</span>
+<span class="fc" id="L82">            Listing listing = requireOpenListing(listingId, ListingType.SELL);</span>
+<span class="fc" id="L83">            handleExisting(buyerId, listingId, replaceExisting);</span>
+<span class="fc" id="L84">            Deal deal = newDeal(buyerId, listing, DealType.OFFER, message);</span>
+<span class="fc" id="L85">            deal.setOfferedPrice(price);</span>
+<span class="fc" id="L86">            store.putDeal(deal);</span>
+<span class="fc" id="L87">            postCard(buyerId, listing, &quot;Offer: HK$&quot; + price.toPlainString() + optional(message), deal.getId());</span>
+<span class="fc" id="L88">            notifications.notify(listing.getSellerId(), NotificationCategory.DEALS, &quot;New offer&quot;,</span>
+<span class="fc" id="L89">                    buyer.getFullName() + &quot; offered HK$&quot; + price.toPlainString() + &quot; for \&quot;&quot; + listing.getTitle()</span>
+<span class="fc" id="L90">                            + &quot;\&quot;.&quot;, deal.getId());</span>
+<span class="fc" id="L91">            store.commit();</span>
+<span class="fc" id="L92">            return deal;</span>
+        }
+    }
+
+    /**
+     * Sends a borrow request with a proposed period on a Lend listing.
+     * @param buyerId buyer
+     * @param listingId a Live Lend listing
+     * @param start proposed start (not in the past)
+     * @param end proposed end, after the start
+     * @param message optional message to the seller
+     * @param replaceExisting true to replace the buyer's existing Pending/Countered request on this listing
+     * @return the new Pending deal
+     * @throws ValidationException if the period breaks a rule
+     * @throws MarketplaceException if the listing is no longer available or a request already exists
+     */
+    public Deal requestBorrow(String buyerId, String listingId, LocalDateTime start, LocalDateTime end,
+                              String message, boolean replaceExisting) {
+<span class="fc" id="L110">        Buyer buyer = Access.requireBuyer(store, buyerId);</span>
+<span class="fc" id="L111">        synchronized (store) {</span>
+<span class="fc" id="L112">            Listing listing = requireOpenListing(listingId, ListingType.LEND);</span>
+<span class="fc" id="L113">            validatePeriod(start, end, listing);</span>
+<span class="fc" id="L114">            handleExisting(buyerId, listingId, replaceExisting);</span>
+<span class="fc" id="L115">            Deal deal = newDeal(buyerId, listing, DealType.BORROW, message);</span>
+<span class="fc" id="L116">            deal.setBorrowPeriod(start, end);</span>
+<span class="fc" id="L117">            store.putDeal(deal);</span>
+<span class="fc" id="L118">            String period = start.format(ListingService.DISPLAY_TIME) + &quot; to &quot; + end.format(ListingService.DISPLAY_TIME);</span>
+<span class="fc" id="L119">            postCard(buyerId, listing, &quot;Borrow request: &quot; + period + optional(message), deal.getId());</span>
+<span class="fc" id="L120">            notifications.notify(listing.getSellerId(), NotificationCategory.DEALS, &quot;New borrow request&quot;,</span>
+<span class="fc" id="L121">                    buyer.getFullName() + &quot; wants to borrow \&quot;&quot; + listing.getTitle() + &quot;\&quot; from &quot; + period + &quot;.&quot;,</span>
+<span class="fc" id="L122">                    deal.getId());</span>
+<span class="fc" id="L123">            store.commit();</span>
+<span class="fc" id="L124">            return deal;</span>
+        }
+    }
+
+    /**
+     * Claims a Giveaway listing with one action. The check, the claim and the reservation happen in one atomic
+     * step, so when two buyers claim at the same time only the first succeeds.
+     * @param buyerId buyer
+     * @param listingId a Live Giveaway listing
+     * @return the new Pending claim (the listing becomes Reserved)
+     * @throws MarketplaceException if the listing was already claimed or is otherwise unavailable
+     */
+    public Deal claim(String buyerId, String listingId) {
+<span class="fc" id="L137">        Buyer buyer = Access.requireBuyer(store, buyerId);</span>
+<span class="fc" id="L138">        synchronized (store) {</span>
+<span class="fc" id="L139">            Listing listing = requireOpenListing(listingId, ListingType.GIVEAWAY);</span>
+<span class="fc" id="L140">            Deal deal = newDeal(buyerId, listing, DealType.CLAIM, null);</span>
+<span class="fc" id="L141">            store.putDeal(deal);</span>
+<span class="fc" id="L142">            listing.setStatus(ListingStatus.RESERVED);</span>
+<span class="fc" id="L143">            postCard(buyerId, listing, &quot;Claimed this giveaway&quot;, deal.getId());</span>
+<span class="fc" id="L144">            notifications.notify(listing.getSellerId(), NotificationCategory.DEALS, &quot;New claim&quot;,</span>
+<span class="fc" id="L145">                    buyer.getFullName() + &quot; claimed \&quot;&quot; + listing.getTitle() + &quot;\&quot;.&quot;, deal.getId());</span>
+<span class="fc" id="L146">            store.commit();</span>
+<span class="fc" id="L147">            return deal;</span>
+        }
+    }
+
+    /**
+     * @param buyerId buyer
+     * @param listingId listing
+     * @return the buyer's Pending or Countered offer/request on the listing, if any
+     */
+    public Optional&lt;Deal&gt; openRequest(String buyerId, String listingId) {
+<span class="fc bfc" id="L157" title="All 2 branches covered.">        return store.deals().stream().filter(d -&gt; d.getBuyerId().equals(buyerId)</span>
+<span class="fc bfc" id="L158" title="All 4 branches covered.">                &amp;&amp; d.getListingId().equals(listingId) &amp;&amp; d.getStatus().isOpenRequest()).findFirst();</span>
+    }
+
+    // =====================================================================
+    // Seller-side rules (used by the Seller Portal, Task 2.5)
+    // =====================================================================
+
+    /**
+     * Seller accepts a Pending deal. Sell: deal Accepted, listing Reserved. Lend: deal Borrowed, listing Lent for
+     * the period. Giveaway: claim Accepted, listing stays Reserved. All other open requests on the listing are
+     * declined and their buyers notified.
+     * @param sellerId seller who owns the listing
+     * @param dealId Pending deal
+     * @return the accepted deal
+     * @throws MarketplaceException if the deal or listing changed meanwhile
+     */
+    public Deal acceptDeal(String sellerId, String dealId) {
+<span class="fc" id="L175">        Access.requireSeller(store, sellerId);</span>
+<span class="fc" id="L176">        synchronized (store) {</span>
+<span class="fc" id="L177">            Deal deal = requireDeal(dealId);</span>
+<span class="fc" id="L178">            Listing listing = requireSellerListing(sellerId, deal);</span>
+<span class="fc bfc" id="L179" title="All 2 branches covered.">            if (deal.getStatus() != DealStatus.PENDING) {</span>
+<span class="fc" id="L180">                throw new MarketplaceException(&quot;This request is no longer pending (&quot; + deal.getStatus().label() + &quot;).&quot;);</span>
+            }
+<span class="fc bfc" id="L182" title="All 2 branches covered.">            boolean available = deal.getType() == DealType.CLAIM</span>
+<span class="pc bpc" id="L183" title="1 of 2 branches missed.">                    ? listing.getStatus() == ListingStatus.RESERVED</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">                    : listing.getStatus() == ListingStatus.LIVE;</span>
+<span class="fc bfc" id="L185" title="All 2 branches covered.">            if (!available) {</span>
+<span class="fc" id="L186">                throw new MarketplaceException(&quot;This listing is no longer available.&quot;);</span>
+            }
+<span class="fc" id="L188">            allocate(deal, listing);</span>
+<span class="fc" id="L189">            notifications.notify(deal.getBuyerId(), NotificationCategory.DEALS, &quot;Offer accepted&quot;,</span>
+<span class="fc" id="L190">                    &quot;Your &quot; + deal.getType().label().toLowerCase(Locale.ROOT) + &quot; for \&quot;&quot; + listing.getTitle()</span>
+<span class="fc" id="L191">                            + &quot;\&quot; was accepted.&quot;, deal.getId());</span>
+<span class="fc" id="L192">            store.commit();</span>
+<span class="fc" id="L193">            return deal;</span>
+        }
+    }
+
+    /**
+     * Seller declines a Pending deal. A declined giveaway claim makes the listing Live again.
+     * @param sellerId seller who owns the listing
+     * @param dealId Pending deal
+     * @return the declined deal
+     * @throws MarketplaceException if the deal is no longer pending
+     */
+    public Deal declineDeal(String sellerId, String dealId) {
+<span class="fc" id="L205">        Access.requireSeller(store, sellerId);</span>
+<span class="fc" id="L206">        synchronized (store) {</span>
+<span class="fc" id="L207">            Deal deal = requireDeal(dealId);</span>
+<span class="fc" id="L208">            Listing listing = requireSellerListing(sellerId, deal);</span>
+<span class="fc bfc" id="L209" title="All 2 branches covered.">            if (deal.getStatus() != DealStatus.PENDING) {</span>
+<span class="fc" id="L210">                throw new MarketplaceException(&quot;This request is no longer pending (&quot; + deal.getStatus().label() + &quot;).&quot;);</span>
+            }
+<span class="fc" id="L212">            deal.setStatus(DealStatus.DECLINED, now());</span>
+<span class="fc" id="L213">            releaseClaimHold(deal, listing);</span>
+<span class="fc" id="L214">            notifications.notify(deal.getBuyerId(), NotificationCategory.DEALS, &quot;Offer declined&quot;,</span>
+<span class="fc" id="L215">                    &quot;Your &quot; + deal.getType().label().toLowerCase(Locale.ROOT) + &quot; for \&quot;&quot; + listing.getTitle()</span>
+<span class="fc" id="L216">                            + &quot;\&quot; was declined.&quot;, deal.getId());</span>
+<span class="fc" id="L217">            store.commit();</span>
+<span class="fc" id="L218">            return deal;</span>
+        }
+    }
+
+    /**
+     * Seller counters a Pending offer with a different price. The listing stays Live.
+     * @param sellerId seller who owns the listing
+     * @param dealId Pending offer
+     * @param priceText counter price in HK$
+     * @return the countered deal
+     */
+    public Deal counterOffer(String sellerId, String dealId, String priceText) {
+<span class="fc" id="L230">        Access.requireSeller(store, sellerId);</span>
+<span class="fc" id="L231">        BigDecimal price = parseOfferPrice(priceText);</span>
+<span class="fc" id="L232">        synchronized (store) {</span>
+<span class="fc" id="L233">            Deal deal = requireDeal(dealId);</span>
+<span class="fc" id="L234">            Listing listing = requireCounterable(sellerId, deal, DealType.OFFER);</span>
+<span class="fc" id="L235">            deal.setCounterPrice(price);</span>
+<span class="fc" id="L236">            deal.setStatus(DealStatus.COUNTERED, now());</span>
+<span class="fc" id="L237">            finishCounter(sellerId, deal, listing, &quot;Counter-offer: HK$&quot; + price.toPlainString());</span>
+<span class="fc" id="L238">            return deal;</span>
+        }
+    }
+
+    /**
+     * Seller counters a Pending borrow request with a different period. The listing stays Live.
+     * @param sellerId seller who owns the listing
+     * @param dealId Pending borrow request
+     * @param start counter start
+     * @param end counter end
+     * @return the countered deal
+     */
+    public Deal counterBorrow(String sellerId, String dealId, LocalDateTime start, LocalDateTime end) {
+<span class="fc" id="L251">        Access.requireSeller(store, sellerId);</span>
+<span class="fc" id="L252">        synchronized (store) {</span>
+<span class="fc" id="L253">            Deal deal = requireDeal(dealId);</span>
+<span class="fc" id="L254">            Listing listing = requireCounterable(sellerId, deal, DealType.BORROW);</span>
+<span class="fc" id="L255">            validatePeriod(start, end, listing);</span>
+<span class="fc" id="L256">            deal.setCounterPeriod(start, end);</span>
+<span class="fc" id="L257">            deal.setStatus(DealStatus.COUNTERED, now());</span>
+<span class="fc" id="L258">            finishCounter(sellerId, deal, listing, &quot;Counter-offer: borrow &quot; + start.format(ListingService.DISPLAY_TIME)</span>
+<span class="fc" id="L259">                    + &quot; to &quot; + end.format(ListingService.DISPLAY_TIME));</span>
+<span class="fc" id="L260">            return deal;</span>
+        }
+    }
+
+    // =====================================================================
+    // Task 1.6: My Deals actions
+    // =====================================================================
+
+    /**
+     * Buyer accepts or declines the seller's counter-offer.
+     * @param buyerId buyer who owns the deal
+     * @param dealId a Countered deal
+     * @param accept true to accept (deal Accepted/Borrowed at the counter terms), false to decline
+     * @return the updated deal
+     * @throws MarketplaceException if the counter is no longer valid or the listing is no longer Live
+     */
+    public Deal respondToCounter(String buyerId, String dealId, boolean accept) {
+<span class="fc" id="L277">        Access.requireBuyer(store, buyerId);</span>
+<span class="fc" id="L278">        synchronized (store) {</span>
+<span class="fc" id="L279">            Deal deal = requireBuyerDeal(buyerId, dealId);</span>
+<span class="fc" id="L280">            Listing listing = requireListing(deal.getListingId());</span>
+<span class="pc bpc" id="L281" title="1 of 4 branches missed.">            if (deal.getStatus() != DealStatus.COUNTERED || listing.getStatus() != ListingStatus.LIVE) {</span>
+<span class="fc" id="L282">                throw new MarketplaceException(&quot;This counter-offer is no longer valid.&quot;);</span>
+            }
+            String verb;
+<span class="fc bfc" id="L285" title="All 2 branches covered.">            if (accept) {</span>
+<span class="fc bfc" id="L286" title="All 2 branches covered.">                if (deal.getType() == DealType.BORROW) {</span>
+<span class="fc" id="L287">                    validatePeriod(deal.getCounterStart(), deal.getCounterEnd(), listing);</span>
+<span class="fc" id="L288">                    deal.setBorrowPeriod(deal.getCounterStart(), deal.getCounterEnd());</span>
+                }
+<span class="fc" id="L290">                allocate(deal, listing);</span>
+<span class="fc" id="L291">                verb = &quot;accepted&quot;;</span>
+            } else {
+<span class="fc" id="L293">                deal.setStatus(DealStatus.DECLINED, now());</span>
+<span class="fc" id="L294">                verb = &quot;declined&quot;;</span>
+            }
+<span class="fc" id="L296">            notifications.notify(listing.getSellerId(), NotificationCategory.DEALS, &quot;Counter-offer &quot; + verb,</span>
+<span class="fc" id="L297">                    buyerName(buyerId) + &quot; &quot; + verb + &quot; your counter-offer for \&quot;&quot; + listing.getTitle() + &quot;\&quot;.&quot;,</span>
+<span class="fc" id="L298">                    deal.getId());</span>
+<span class="fc" id="L299">            store.commit();</span>
+<span class="fc" id="L300">            return deal;</span>
+        }
+    }
+
+    /**
+     * Buyer withdraws a Pending or Countered request. Withdrawing a giveaway claim makes the listing Live again.
+     * @param buyerId buyer who owns the deal
+     * @param dealId deal
+     * @return the withdrawn deal
+     * @throws MarketplaceException if the seller already accepted or declined it
+     */
+    public Deal withdraw(String buyerId, String dealId) {
+<span class="fc" id="L312">        Access.requireBuyer(store, buyerId);</span>
+<span class="fc" id="L313">        synchronized (store) {</span>
+<span class="fc" id="L314">            Deal deal = requireBuyerDeal(buyerId, dealId);</span>
+<span class="fc bfc" id="L315" title="All 2 branches covered.">            if (!deal.getStatus().isOpenRequest()) {</span>
+<span class="fc" id="L316">                throw new MarketplaceException(&quot;This request can no longer be withdrawn (it is now &quot;</span>
+<span class="fc" id="L317">                        + deal.getStatus().label() + &quot;).&quot;);</span>
+            }
+<span class="fc" id="L319">            Listing listing = requireListing(deal.getListingId());</span>
+<span class="fc" id="L320">            deal.setStatus(DealStatus.WITHDRAWN, now());</span>
+<span class="fc" id="L321">            releaseClaimHold(deal, listing);</span>
+<span class="fc" id="L322">            notifications.notify(listing.getSellerId(), NotificationCategory.DEALS, &quot;Request withdrawn&quot;,</span>
+<span class="fc" id="L323">                    buyerName(buyerId) + &quot; withdrew their &quot; + deal.getType().label().toLowerCase(Locale.ROOT)</span>
+<span class="fc" id="L324">                            + &quot; for \&quot;&quot; + listing.getTitle() + &quot;\&quot;.&quot;, deal.getId());</span>
+<span class="fc" id="L325">            store.commit();</span>
+<span class="fc" id="L326">            return deal;</span>
+        }
+    }
+
+    /**
+     * Buyer returns a borrowed item before the due time. The listing becomes Live again.
+     * @param buyerId buyer who owns the deal
+     * @param dealId a Borrowed deal
+     * @return the returned deal
+     * @throws MarketplaceException if it is not borrowed, or was already returned automatically
+     */
+    public Deal returnItem(String buyerId, String dealId) {
+<span class="fc" id="L338">        Access.requireBuyer(store, buyerId);</span>
+<span class="fc" id="L339">        synchronized (store) {</span>
+<span class="fc" id="L340">            Deal deal = requireBuyerDeal(buyerId, dealId);</span>
+<span class="fc bfc" id="L341" title="All 4 branches covered.">            if (deal.getStatus() == DealStatus.BORROWED &amp;&amp; !now().isBefore(deal.getBorrowEnd())) {</span>
+<span class="fc" id="L342">                processDueDates();</span>
+            }
+<span class="fc bfc" id="L344" title="All 2 branches covered.">            if (deal.getStatus() == DealStatus.AUTO_RETURNED) {</span>
+<span class="fc" id="L345">                throw new MarketplaceException(&quot;This item was already returned automatically at the due time.&quot;);</span>
+            }
+<span class="fc bfc" id="L347" title="All 2 branches covered.">            if (deal.getStatus() != DealStatus.BORROWED) {</span>
+<span class="fc" id="L348">                throw new MarketplaceException(&quot;Only borrowed items can be returned.&quot;);</span>
+            }
+<span class="fc" id="L350">            Listing listing = requireListing(deal.getListingId());</span>
+<span class="fc" id="L351">            deal.setStatus(DealStatus.RETURNED, now());</span>
+<span class="fc" id="L352">            deal.setCompletedAt(now());</span>
+<span class="fc" id="L353">            releaseLoan(listing);</span>
+<span class="fc" id="L354">            notifications.notify(listing.getSellerId(), NotificationCategory.BORROWING, &quot;Item returned&quot;,</span>
+<span class="fc" id="L355">                    buyerName(buyerId) + &quot; returned \&quot;&quot; + listing.getTitle() + &quot;\&quot;.&quot;, deal.getId());</span>
+<span class="fc" id="L356">            store.commit();</span>
+<span class="fc" id="L357">            return deal;</span>
+        }
+    }
+
+    /**
+     * Buyer marks an accepted purchase or giveaway as received. The listing becomes Sold or Given and any other
+     * open requests are declined. The UI then asks the buyer to rate the seller.
+     * @param buyerId buyer who owns the deal
+     * @param dealId an Accepted offer or claim
+     * @return the completed deal
+     * @throws MarketplaceException if the deal is not Accepted
+     */
+    public Deal markComplete(String buyerId, String dealId) {
+<span class="fc" id="L370">        Access.requireBuyer(store, buyerId);</span>
+<span class="fc" id="L371">        synchronized (store) {</span>
+<span class="fc" id="L372">            Deal deal = requireBuyerDeal(buyerId, dealId);</span>
+<span class="pc bpc" id="L373" title="1 of 4 branches missed.">            if (deal.getStatus() != DealStatus.ACCEPTED || deal.getType() == DealType.BORROW) {</span>
+<span class="fc" id="L374">                throw new MarketplaceException(&quot;Only accepted purchases and giveaways can be marked complete.&quot;);</span>
+            }
+<span class="fc" id="L376">            Listing listing = requireListing(deal.getListingId());</span>
+<span class="fc" id="L377">            deal.setStatus(DealStatus.COMPLETED, now());</span>
+<span class="fc" id="L378">            deal.setCompletedAt(now());</span>
+<span class="fc bfc" id="L379" title="All 2 branches covered.">            if (listing.getStatus() != ListingStatus.REMOVED) {</span>
+<span class="fc bfc" id="L380" title="All 2 branches covered.">                listing.setStatus(deal.getType() == DealType.OFFER ? ListingStatus.SOLD : ListingStatus.GIVEN);</span>
+            }
+<span class="fc" id="L382">            declineOthers(deal, listing);</span>
+<span class="fc" id="L383">            notifications.notify(listing.getSellerId(), NotificationCategory.DEALS, &quot;Deal completed&quot;,</span>
+<span class="fc" id="L384">                    buyerName(buyerId) + &quot; marked \&quot;&quot; + listing.getTitle() + &quot;\&quot; as received.&quot;, deal.getId());</span>
+<span class="fc" id="L385">            store.commit();</span>
+<span class="fc" id="L386">            return deal;</span>
+        }
+    }
+
+    /**
+     * Auto-return and due-date reminders, run every second by a timer (Tasks 1.6 and 1.8).
+     * A Borrowed deal past its due time becomes Auto-returned and the listing Live again (unless removed).
+     * One reminder is sent 24 hours before the due time, or halfway through periods shorter than 48 hours.
+     * @return number of deals changed (reminders or returns)
+     */
+    public int processDueDates() {
+<span class="fc" id="L397">        int changed = 0;</span>
+<span class="fc" id="L398">        synchronized (store) {</span>
+<span class="fc" id="L399">            LocalDateTime now = now();</span>
+<span class="fc bfc" id="L400" title="All 2 branches covered.">            for (Deal deal : store.deals()) {</span>
+<span class="pc bpc" id="L401" title="1 of 4 branches missed.">                if (deal.getStatus() != DealStatus.BORROWED || deal.getBorrowEnd() == null) {</span>
+<span class="nc" id="L402">                    continue;</span>
+                }
+<span class="fc" id="L404">                Listing listing = store.findListing(deal.getListingId()).orElse(null);</span>
+<span class="pc bpc" id="L405" title="1 of 2 branches missed.">                String title = listing == null ? &quot;the item&quot; : &quot;\&quot;&quot; + listing.getTitle() + &quot;\&quot;&quot;;</span>
+<span class="fc bfc" id="L406" title="All 2 branches covered.">                if (!now.isBefore(deal.getBorrowEnd())) {</span>
+<span class="fc" id="L407">                    deal.setStatus(DealStatus.AUTO_RETURNED, now);</span>
+<span class="fc" id="L408">                    deal.setCompletedAt(deal.getBorrowEnd());</span>
+<span class="pc bpc" id="L409" title="1 of 2 branches missed.">                    if (listing != null) {</span>
+<span class="fc" id="L410">                        releaseLoan(listing);</span>
+<span class="fc" id="L411">                        notifications.notify(listing.getSellerId(), NotificationCategory.BORROWING, &quot;Item auto-returned&quot;,</span>
+<span class="fc" id="L412">                                title + &quot; was returned automatically at the due time.&quot;, deal.getId());</span>
+                    }
+<span class="fc" id="L414">                    notifications.notify(deal.getBuyerId(), NotificationCategory.BORROWING, &quot;Item auto-returned&quot;,</span>
+                            &quot;The borrowing period for &quot; + title + &quot; ended, so it was returned automatically.&quot;,
+<span class="fc" id="L416">                            deal.getId());</span>
+<span class="fc" id="L417">                    changed++;</span>
+<span class="fc bfc" id="L418" title="All 4 branches covered.">                } else if (!deal.isReminderSent() &amp;&amp; reminderDue(deal, now)) {</span>
+<span class="fc" id="L419">                    deal.setReminderSent(true);</span>
+<span class="fc" id="L420">                    notifications.notify(deal.getBuyerId(), NotificationCategory.BORROWING, &quot;Due soon&quot;,</span>
+<span class="fc" id="L421">                            title + &quot; is due back at &quot; + deal.getBorrowEnd().format(ListingService.DISPLAY_TIME) + &quot;.&quot;,</span>
+<span class="fc" id="L422">                            deal.getId());</span>
+<span class="fc" id="L423">                    changed++;</span>
+                }
+<span class="fc" id="L425">            }</span>
+<span class="fc bfc" id="L426" title="All 2 branches covered.">            if (changed &gt; 0) {</span>
+<span class="fc" id="L427">                store.commit();</span>
+            }
+<span class="fc" id="L429">        }</span>
+<span class="fc" id="L430">        return changed;</span>
+    }
+
+    // =====================================================================
+    // Queries for My Deals (1.6) and Deal History (1.9)
+    // =====================================================================
+
+    /**
+     * @param buyerId buyer
+     * @return all of the buyer's deals, most recently updated first
+     */
+    public List&lt;Deal&gt; dealsForBuyer(String buyerId) {
+<span class="fc" id="L442">        return store.deals().stream().filter(d -&gt; d.getBuyerId().equals(buyerId))</span>
+<span class="fc" id="L443">                .sorted(Comparator.comparing(Deal::getUpdatedAt).reversed()).collect(Collectors.toList());</span>
+    }
+
+    /**
+     * @param buyerId buyer
+     * @return the buyer's active deals (Pending, Countered, Accepted, Borrowed)
+     */
+    public List&lt;Deal&gt; activeDeals(String buyerId) {
+<span class="fc" id="L451">        return dealsForBuyer(buyerId).stream().filter(d -&gt; d.getStatus().isActive()).collect(Collectors.toList());</span>
+    }
+
+    /**
+     * @param buyerId buyer
+     * @return the buyer's deals that are no longer active (finished, declined, withdrawn, cancelled)
+     */
+    public List&lt;Deal&gt; closedDeals(String buyerId) {
+<span class="fc bfc" id="L459" title="All 2 branches covered.">        return dealsForBuyer(buyerId).stream().filter(d -&gt; !d.getStatus().isActive()).collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Deal History: the buyer's finished deals, newest first, searched and filtered (Task 1.9).
+     * @param buyerId buyer
+     * @param query filters (keyword on item title or seller name, date range, category, deal type)
+     * @return matching finished deals
+     * @throws ValidationException if the date range is invalid
+     */
+    public List&lt;Deal&gt; history(String buyerId, HistoryQuery query) {
+<span class="fc" id="L470">        LocalDate today = LocalDate.now(clock);</span>
+<span class="fc bfc" id="L471" title="All 6 branches covered.">        if (query.getFrom() != null &amp;&amp; query.getTo() != null &amp;&amp; query.getFrom().isAfter(query.getTo())) {</span>
+<span class="fc" id="L472">            throw new ValidationException(&quot;The start date must not be after the end date&quot;);</span>
+        }
+<span class="fc bfc" id="L474" title="All 4 branches covered.">        if ((query.getFrom() != null &amp;&amp; query.getFrom().isAfter(today))</span>
+<span class="fc bfc" id="L475" title="All 4 branches covered.">                || (query.getTo() != null &amp;&amp; query.getTo().isAfter(today))) {</span>
+<span class="fc" id="L476">            throw new ValidationException(&quot;Dates cannot be in the future&quot;);</span>
+        }
+<span class="fc bfc" id="L478" title="All 2 branches covered.">        String key = query.getKeyword() == null ? &quot;&quot; : query.getKeyword().trim().toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L479">        List&lt;Deal&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L480" title="All 2 branches covered.">        for (Deal deal : store.deals()) {</span>
+<span class="fc bfc" id="L481" title="All 4 branches covered.">            if (!deal.getBuyerId().equals(buyerId) || !deal.getStatus().isFinished()) {</span>
+<span class="fc" id="L482">                continue;</span>
+            }
+<span class="fc" id="L484">            Listing listing = store.findListing(deal.getListingId()).orElse(null);</span>
+<span class="fc bfc" id="L485" title="All 2 branches covered.">            if (listing == null) {</span>
+<span class="fc" id="L486">                continue;</span>
+            }
+<span class="fc" id="L488">            LocalDate date = dealDate(deal).toLocalDate();</span>
+<span class="fc" id="L489">            String seller = store.findUser(listing.getSellerId()).map(User::getFullName).orElse(&quot;&quot;);</span>
+<span class="fc bfc" id="L490" title="All 4 branches covered.">            boolean keyOk = key.isEmpty() || listing.getTitle().toLowerCase(Locale.ROOT).contains(key)</span>
+<span class="fc bfc" id="L491" title="All 2 branches covered.">                    || seller.toLowerCase(Locale.ROOT).contains(key);</span>
+<span class="fc bfc" id="L492" title="All 2 branches covered.">            boolean ok = keyOk</span>
+<span class="fc bfc" id="L493" title="All 4 branches covered.">                    &amp;&amp; (query.getFrom() == null || !date.isBefore(query.getFrom()))</span>
+<span class="fc bfc" id="L494" title="All 4 branches covered.">                    &amp;&amp; (query.getTo() == null || !date.isAfter(query.getTo()))</span>
+<span class="fc bfc" id="L495" title="All 4 branches covered.">                    &amp;&amp; (query.getCategory() == null || listing.getCategory() == query.getCategory())</span>
+<span class="fc bfc" id="L496" title="All 4 branches covered.">                    &amp;&amp; (query.getDealType() == null || deal.getType() == query.getDealType());</span>
+<span class="fc bfc" id="L497" title="All 2 branches covered.">            if (ok) {</span>
+<span class="fc" id="L498">                result.add(deal);</span>
+            }
+<span class="fc" id="L500">        }</span>
+<span class="fc" id="L501">        result.sort(Comparator.comparing(DealService::dealDate).reversed());</span>
+<span class="fc" id="L502">        return result;</span>
+    }
+
+    /**
+     * @param deal a deal
+     * @return the date shown in Deal History: when it finished, or when it was submitted if not finished
+     */
+    public static LocalDateTime dealDate(Deal deal) {
+<span class="fc bfc" id="L510" title="All 2 branches covered.">        return deal.getCompletedAt() != null ? deal.getCompletedAt() : deal.getSubmittedAt();</span>
+    }
+
+    /**
+     * @param deal a borrowed deal
+     * @return time left before the due time (zero if overdue), or null if it has no due time
+     */
+    public Duration remaining(Deal deal) {
+<span class="fc bfc" id="L518" title="All 2 branches covered.">        if (deal.getBorrowEnd() == null) {</span>
+<span class="fc" id="L519">            return null;</span>
+        }
+<span class="fc" id="L521">        Duration left = Duration.between(now(), deal.getBorrowEnd());</span>
+<span class="fc bfc" id="L522" title="All 2 branches covered.">        return left.isNegative() ? Duration.ZERO : left;</span>
+    }
+
+    // =====================================================================
+    // helpers
+    // =====================================================================
+
+    private LocalDateTime now() {
+<span class="fc" id="L530">        return LocalDateTime.now(clock);</span>
+    }
+
+    private static BigDecimal parseOfferPrice(String text) {
+<span class="fc bfc" id="L534" title="All 4 branches covered.">        if (text == null || text.isBlank()) {</span>
+<span class="fc" id="L535">            throw new ValidationException(&quot;Please enter a price&quot;);</span>
+        }
+        BigDecimal price;
+        try {
+<span class="fc" id="L539">            price = new BigDecimal(text.trim());</span>
+<span class="fc" id="L540">        } catch (NumberFormatException e) {</span>
+<span class="fc" id="L541">            throw new ValidationException(&quot;Price must be a number&quot;);</span>
+<span class="fc" id="L542">        }</span>
+<span class="fc bfc" id="L543" title="All 2 branches covered.">        if (price.signum() &lt;= 0) {</span>
+<span class="fc" id="L544">            throw new ValidationException(&quot;Price must be greater than 0&quot;);</span>
+        }
+<span class="fc bfc" id="L546" title="All 2 branches covered.">        if (price.stripTrailingZeros().scale() &gt; 2) {</span>
+<span class="fc" id="L547">            throw new ValidationException(&quot;Price can have at most 2 decimal places&quot;);</span>
+        }
+<span class="fc" id="L549">        return price.setScale(2, java.math.RoundingMode.UNNECESSARY);</span>
+    }
+
+    private void validatePeriod(LocalDateTime start, LocalDateTime end, Listing listing) {
+<span class="fc bfc" id="L553" title="All 4 branches covered.">        if (start == null || end == null) {</span>
+<span class="fc" id="L554">            throw new ValidationException(&quot;Please enter both a start and an end time&quot;);</span>
+        }
+<span class="fc" id="L556">        List&lt;String&gt; errors = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L557" title="All 2 branches covered.">        if (start.isBefore(now().minus(START_TOLERANCE))) {</span>
+<span class="fc" id="L558">            errors.add(&quot;The start time cannot be in the past&quot;);</span>
+        }
+<span class="fc bfc" id="L560" title="All 2 branches covered.">        if (!end.isAfter(start)) {</span>
+<span class="fc" id="L561">            errors.add(&quot;The end time must be after the start time&quot;);</span>
+        } else {
+<span class="fc" id="L563">            Duration length = Duration.between(start, end);</span>
+<span class="fc bfc" id="L564" title="All 2 branches covered.">            if (length.compareTo(MIN_BORROW) &lt; 0) {</span>
+<span class="fc" id="L565">                errors.add(&quot;The borrowing period must be at least &quot; + MIN_BORROW.getSeconds() + &quot; seconds&quot;);</span>
+            }
+<span class="fc bfc" id="L567" title="All 2 branches covered.">            if (listing.getLendingDurationSeconds() &gt; 0</span>
+<span class="fc bfc" id="L568" title="All 2 branches covered.">                    &amp;&amp; length.getSeconds() &gt; listing.getLendingDurationSeconds()) {</span>
+<span class="fc" id="L569">                errors.add(&quot;The borrowing period is longer than the seller allows (&quot;</span>
+<span class="fc" id="L570">                        + formatDuration(Duration.ofSeconds(listing.getLendingDurationSeconds())) + &quot;)&quot;);</span>
+            }
+        }
+<span class="fc bfc" id="L573" title="All 2 branches covered.">        if (!errors.isEmpty()) {</span>
+<span class="fc" id="L574">            throw new ValidationException(errors);</span>
+        }
+<span class="fc" id="L576">    }</span>
+
+    private Listing requireOpenListing(String listingId, ListingType type) {
+<span class="fc" id="L579">        Listing listing = store.findListing(listingId).orElse(null);</span>
+<span class="fc bfc" id="L580" title="All 2 branches covered.">        boolean sellerActive = listing != null</span>
+<span class="fc bfc" id="L581" title="All 2 branches covered.">                &amp;&amp; store.findUser(listing.getSellerId()).map(User::isActive).orElse(false);</span>
+<span class="fc bfc" id="L582" title="All 6 branches covered.">        if (listing == null || listing.getStatus() != ListingStatus.LIVE || !sellerActive) {</span>
+<span class="fc" id="L583">            throw new MarketplaceException(&quot;This listing is no longer available.&quot;);</span>
+        }
+<span class="fc bfc" id="L585" title="All 2 branches covered.">        if (listing.getType() != type) {</span>
+<span class="fc" id="L586">            throw new MarketplaceException(&quot;This action does not match the listing type (&quot; + listing.getType() + &quot;).&quot;);</span>
+        }
+<span class="fc" id="L588">        return listing;</span>
+    }
+
+    private void handleExisting(String buyerId, String listingId, boolean replaceExisting) {
+<span class="fc" id="L592">        Optional&lt;Deal&gt; existing = openRequest(buyerId, listingId);</span>
+<span class="fc bfc" id="L593" title="All 2 branches covered.">        if (existing.isPresent()) {</span>
+<span class="fc bfc" id="L594" title="All 2 branches covered.">            if (!replaceExisting) {</span>
+<span class="fc" id="L595">                throw new MarketplaceException(&quot;You already have a &quot; + existing.get().getStatus().label().toLowerCase(Locale.ROOT)</span>
+                        + &quot; request on this listing.&quot;);
+            }
+<span class="fc" id="L598">            existing.get().setStatus(DealStatus.WITHDRAWN, now());</span>
+        }
+<span class="fc" id="L600">    }</span>
+
+    private Deal newDeal(String buyerId, Listing listing, DealType type, String message) {
+<span class="fc" id="L603">        Deal deal = new Deal(Ids.next(&quot;D&quot;), buyerId, listing.getId(), type, now());</span>
+<span class="fc bfc" id="L604" title="All 4 branches covered.">        deal.setMessage(message == null || message.isBlank() ? null : message.trim());</span>
+<span class="fc" id="L605">        return deal;</span>
+    }
+
+    private void postCard(String buyerId, Listing listing, String text, String dealId) {
+<span class="fc" id="L609">        ChatThread thread = chat.openThread(buyerId, listing.getId());</span>
+<span class="fc" id="L610">        chat.postOfferCard(thread, buyerId, Role.BUYER, text, dealId);</span>
+<span class="fc" id="L611">    }</span>
+
+    private Deal requireDeal(String dealId) {
+<span class="fc" id="L614">        return store.findDeal(dealId).orElseThrow(() -&gt; new MarketplaceException(&quot;Deal not found.&quot;));</span>
+    }
+
+    private Deal requireBuyerDeal(String buyerId, String dealId) {
+<span class="fc" id="L618">        Deal deal = requireDeal(dealId);</span>
+<span class="fc bfc" id="L619" title="All 2 branches covered.">        if (!deal.getBuyerId().equals(buyerId)) {</span>
+<span class="fc" id="L620">            throw new MarketplaceException(&quot;This deal belongs to another buyer.&quot;);</span>
+        }
+<span class="fc" id="L622">        return deal;</span>
+    }
+
+    private Listing requireListing(String listingId) {
+<span class="pc" id="L626">        return store.findListing(listingId).orElseThrow(() -&gt; new MarketplaceException(&quot;Listing not found.&quot;));</span>
+    }
+
+    private Listing requireSellerListing(String sellerId, Deal deal) {
+<span class="fc" id="L630">        Listing listing = requireListing(deal.getListingId());</span>
+<span class="fc bfc" id="L631" title="All 2 branches covered.">        if (!listing.getSellerId().equals(sellerId)) {</span>
+<span class="fc" id="L632">            throw new MarketplaceException(&quot;This listing belongs to another seller.&quot;);</span>
+        }
+<span class="fc" id="L634">        return listing;</span>
+    }
+
+    private Listing requireCounterable(String sellerId, Deal deal, DealType type) {
+<span class="fc" id="L638">        Listing listing = requireSellerListing(sellerId, deal);</span>
+<span class="fc bfc" id="L639" title="All 2 branches covered.">        if (deal.getType() != type) {</span>
+<span class="fc" id="L640">            throw new MarketplaceException(&quot;Counter-offers are only for Sell and Lend requests of the matching type.&quot;);</span>
+        }
+<span class="pc bpc" id="L642" title="1 of 4 branches missed.">        if (deal.getStatus() != DealStatus.PENDING || listing.getStatus() != ListingStatus.LIVE) {</span>
+<span class="fc" id="L643">            throw new MarketplaceException(&quot;This request can no longer be countered.&quot;);</span>
+        }
+<span class="fc" id="L645">        return listing;</span>
+    }
+
+    private void finishCounter(String sellerId, Deal deal, Listing listing, String text) {
+<span class="fc" id="L649">        ChatThread thread = chat.openThread(deal.getBuyerId(), listing.getId());</span>
+<span class="fc" id="L650">        chat.postOfferCard(thread, sellerId, Role.SELLER, text, deal.getId());</span>
+<span class="fc" id="L651">        notifications.notify(deal.getBuyerId(), NotificationCategory.DEALS, &quot;Counter-offer received&quot;,</span>
+<span class="fc" id="L652">                &quot;The seller of \&quot;&quot; + listing.getTitle() + &quot;\&quot; sent a counter-offer. &quot; + text, deal.getId());</span>
+<span class="fc" id="L653">        store.commit();</span>
+<span class="fc" id="L654">    }</span>
+
+    /** Gives the item to this deal's buyer and declines every other open request on the listing. */
+    private void allocate(Deal deal, Listing listing) {
+<span class="fc bfc" id="L658" title="All 2 branches covered.">        if (deal.getType() == DealType.BORROW) {</span>
+<span class="fc" id="L659">            deal.setStatus(DealStatus.BORROWED, now());</span>
+<span class="fc" id="L660">            listing.setStatus(ListingStatus.LENT);</span>
+<span class="fc" id="L661">            listing.setLentUntil(deal.getBorrowEnd());</span>
+        } else {
+<span class="fc" id="L663">            deal.setStatus(DealStatus.ACCEPTED, now());</span>
+<span class="fc" id="L664">            listing.setStatus(ListingStatus.RESERVED);</span>
+        }
+<span class="fc" id="L666">        declineOthers(deal, listing);</span>
+<span class="fc" id="L667">    }</span>
+
+    private void declineOthers(Deal winner, Listing listing) {
+<span class="fc bfc" id="L670" title="All 2 branches covered.">        for (Deal other : store.deals()) {</span>
+<span class="fc bfc" id="L671" title="All 4 branches covered.">            if (!other.getId().equals(winner.getId()) &amp;&amp; other.getListingId().equals(listing.getId())</span>
+<span class="pc bpc" id="L672" title="1 of 2 branches missed.">                    &amp;&amp; other.getStatus().isOpenRequest()) {</span>
+<span class="fc" id="L673">                other.setStatus(DealStatus.DECLINED, now());</span>
+<span class="fc" id="L674">                notifications.notify(other.getBuyerId(), NotificationCategory.DEALS, &quot;Offer declined&quot;,</span>
+<span class="fc" id="L675">                        &quot;\&quot;&quot; + listing.getTitle() + &quot;\&quot; went to another buyer, so your request was declined.&quot;,</span>
+<span class="fc" id="L676">                        other.getId());</span>
+            }
+<span class="fc" id="L678">        }</span>
+<span class="fc" id="L679">    }</span>
+
+    private void releaseClaimHold(Deal deal, Listing listing) {
+<span class="pc bpc" id="L682" title="1 of 4 branches missed.">        if (deal.getType() == DealType.CLAIM &amp;&amp; listing.getStatus() == ListingStatus.RESERVED) {</span>
+<span class="fc" id="L683">            listing.setStatus(ListingStatus.LIVE);</span>
+        }
+<span class="fc" id="L685">    }</span>
+
+    private void releaseLoan(Listing listing) {
+<span class="fc" id="L688">        listing.setLentUntil(null);</span>
+<span class="fc bfc" id="L689" title="All 2 branches covered.">        if (listing.getStatus() == ListingStatus.LENT) {</span>
+<span class="fc" id="L690">            listing.setStatus(ListingStatus.LIVE);</span>
+        }
+<span class="fc" id="L692">    }</span>
+
+    private static boolean reminderDue(Deal deal, LocalDateTime now) {
+<span class="fc" id="L695">        Duration period = Duration.between(deal.getBorrowStart(), deal.getBorrowEnd());</span>
+<span class="fc" id="L696">        Duration left = Duration.between(now, deal.getBorrowEnd());</span>
+<span class="fc bfc" id="L697" title="All 2 branches covered.">        if (period.compareTo(Duration.ofHours(48)) &gt;= 0) {</span>
+<span class="fc bfc" id="L698" title="All 2 branches covered.">            return left.compareTo(Duration.ofHours(24)) &lt;= 0;</span>
+        }
+<span class="fc bfc" id="L700" title="All 2 branches covered.">        return left.compareTo(period.dividedBy(2)) &lt;= 0;</span>
+    }
+
+    private String buyerName(String buyerId) {
+<span class="fc" id="L704">        return store.findUser(buyerId).map(User::getFullName).orElse(&quot;The buyer&quot;);</span>
+    }
+
+    private static String optional(String message) {
+<span class="fc bfc" id="L708" title="All 4 branches covered.">        return message == null || message.isBlank() ? &quot;&quot; : &quot; - \&quot;&quot; + message.trim() + &quot;\&quot;&quot;;</span>
+    }
+
+    /**
+     * Formats a duration for display, e.g. &quot;2d 3h&quot;, &quot;45m 10s&quot; or &quot;8s&quot;.
+     * @param d duration
+     * @return short text
+     */
+    public static String formatDuration(Duration d) {
+<span class="fc" id="L717">        long s = Math.max(0, d.getSeconds());</span>
+<span class="fc" id="L718">        long days = s / 86_400;</span>
+<span class="fc" id="L719">        long hours = (s % 86_400) / 3_600;</span>
+<span class="fc" id="L720">        long minutes = (s % 3_600) / 60;</span>
+<span class="fc" id="L721">        long seconds = s % 60;</span>
+<span class="fc bfc" id="L722" title="All 2 branches covered.">        if (days &gt; 0) {</span>
+<span class="fc" id="L723">            return days + &quot;d &quot; + hours + &quot;h&quot;;</span>
+        }
+<span class="fc bfc" id="L725" title="All 2 branches covered.">        if (hours &gt; 0) {</span>
+<span class="fc" id="L726">            return hours + &quot;h &quot; + minutes + &quot;m&quot;;</span>
+        }
+<span class="fc bfc" id="L728" title="All 2 branches covered.">        if (minutes &gt; 0) {</span>
+<span class="fc" id="L729">            return minutes + &quot;m &quot; + seconds + &quot;s&quot;;</span>
+        }
+<span class="fc" id="L731">        return seconds + &quot;s&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

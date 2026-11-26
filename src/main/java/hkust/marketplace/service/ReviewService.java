@@ -94,7 +94,7 @@ public class ReviewService {
      * @return every review the buyer submitted, newest first (My Reviews)
      */
     public List<Review> reviewsByBuyer(String buyerId) {
-        return store.reviews().stream().filter(r -> r.getBuyerId().equals(buyerId))
+        return store.reviews().stream().filter(r -> r.getBuyerId().equals(buyerId) && !r.isHidden())
                 .sorted(Comparator.comparing(Review::getPostedAt).reversed()).collect(Collectors.toList());
     }
 

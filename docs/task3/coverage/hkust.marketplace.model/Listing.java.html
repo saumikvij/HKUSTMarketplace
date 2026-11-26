@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Listing.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace – Buyer and Admin</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.model</a> &gt; <span class="el_source">Listing.java</span></div><h1>Listing.java</h1><pre class="source lang-java linenums">package hkust.marketplace.model;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * An item posted by a seller for sale, lending or giveaway.
+ * Buyers only see listings whose status is browsable (Live, Reserved or Lent).
+ */
+public class Listing implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    /** Maximum number of photos per listing. */
+    public static final int MAX_PHOTOS = 6;
+
+    private final String id;
+    private final String sellerId;
+    private ListingType type;
+    private String title;
+    private Category category;
+    private Condition condition;
+    private String description;
+    private BigDecimal price;
+    private long lendingDurationSeconds;
+    private String meetupLocation;
+<span class="fc" id="L29">    private final List&lt;String&gt; photos = new ArrayList&lt;&gt;();</span>
+    private final LocalDateTime postedAt;
+    private LocalDateTime reviewedAt;
+<span class="fc" id="L32">    private ListingStatus status = ListingStatus.PENDING_REVIEW;</span>
+    private int viewCount;
+    private String rejectionReason;
+    private String removalReason;
+    private LocalDateTime lentUntil;
+
+    /**
+     * Creates a listing.
+     * @param id unique id
+     * @param sellerId id of the seller who posted it
+     * @param type sell, lend or giveaway
+     * @param title item name
+     * @param category category
+     * @param condition condition
+     * @param description full description
+     * @param meetupLocation HKUST meet-up location
+     * @param postedAt submission time
+     */
+    public Listing(String id, String sellerId, ListingType type, String title, Category category,
+<span class="fc" id="L51">                   Condition condition, String description, String meetupLocation, LocalDateTime postedAt) {</span>
+<span class="fc" id="L52">        this.id = id;</span>
+<span class="fc" id="L53">        this.sellerId = sellerId;</span>
+<span class="fc" id="L54">        this.type = type;</span>
+<span class="fc" id="L55">        this.title = title;</span>
+<span class="fc" id="L56">        this.category = category;</span>
+<span class="fc" id="L57">        this.condition = condition;</span>
+<span class="fc" id="L58">        this.description = description;</span>
+<span class="fc" id="L59">        this.meetupLocation = meetupLocation;</span>
+<span class="fc" id="L60">        this.postedAt = postedAt;</span>
+<span class="fc" id="L61">    }</span>
+
+    /** @return unique id */
+<span class="fc" id="L64">    public String getId() { return id; }</span>
+    /** @return id of the seller */
+<span class="fc" id="L66">    public String getSellerId() { return sellerId; }</span>
+    /** @return listing type */
+<span class="fc" id="L68">    public ListingType getType() { return type; }</span>
+    /** @param type new listing type */
+<span class="fc" id="L70">    public void setType(ListingType type) { this.type = type; }</span>
+    /** @return item name */
+<span class="fc" id="L72">    public String getTitle() { return title; }</span>
+    /** @param title new item name */
+<span class="fc" id="L74">    public void setTitle(String title) { this.title = title; }</span>
+    /** @return category */
+<span class="fc" id="L76">    public Category getCategory() { return category; }</span>
+    /** @param category new category */
+<span class="fc" id="L78">    public void setCategory(Category category) { this.category = category; }</span>
+    /** @return condition */
+<span class="fc" id="L80">    public Condition getCondition() { return condition; }</span>
+    /** @param condition new condition */
+<span class="fc" id="L82">    public void setCondition(Condition condition) { this.condition = condition; }</span>
+    /** @return full description */
+<span class="fc" id="L84">    public String getDescription() { return description; }</span>
+    /** @param description new description */
+<span class="fc" id="L86">    public void setDescription(String description) { this.description = description; }</span>
+    /** @return asking price in HK$ (Sell listings only), otherwise null */
+<span class="fc" id="L88">    public BigDecimal getPrice() { return price; }</span>
+    /** @param price asking price in HK$ */
+<span class="fc" id="L90">    public void setPrice(BigDecimal price) { this.price = price; }</span>
+    /** @return maximum lending duration in seconds (Lend listings only) */
+<span class="fc" id="L92">    public long getLendingDurationSeconds() { return lendingDurationSeconds; }</span>
+    /** @param seconds maximum lending duration in seconds */
+<span class="fc" id="L94">    public void setLendingDurationSeconds(long seconds) { this.lendingDurationSeconds = seconds; }</span>
+    /** @return meet-up location */
+<span class="fc" id="L96">    public String getMeetupLocation() { return meetupLocation; }</span>
+    /** @param meetupLocation new meet-up location */
+<span class="fc" id="L98">    public void setMeetupLocation(String meetupLocation) { this.meetupLocation = meetupLocation; }</span>
+    /** @return photo file paths or URLs, first one is the thumbnail (modifiable, at most 6) */
+<span class="fc" id="L100">    public List&lt;String&gt; getPhotos() { return photos; }</span>
+    /** @return first photo or null */
+<span class="fc bfc" id="L102" title="All 2 branches covered.">    public String getThumbnail() { return photos.isEmpty() ? null : photos.get(0); }</span>
+    /** @return submission time */
+<span class="fc" id="L104">    public LocalDateTime getPostedAt() { return postedAt; }</span>
+    /** @return time the admin approved or rejected it, or null */
+<span class="fc" id="L106">    public LocalDateTime getReviewedAt() { return reviewedAt; }</span>
+    /** @param reviewedAt approval or rejection time */
+<span class="fc" id="L108">    public void setReviewedAt(LocalDateTime reviewedAt) { this.reviewedAt = reviewedAt; }</span>
+    /** @return current status */
+<span class="fc" id="L110">    public ListingStatus getStatus() { return status; }</span>
+    /** @param status new status */
+<span class="fc" id="L112">    public void setStatus(ListingStatus status) { this.status = status; }</span>
+    /** @return number of times the detail screen was opened */
+<span class="fc" id="L114">    public int getViewCount() { return viewCount; }</span>
+    /** Adds one view (called every time the detail screen opens). */
+<span class="fc" id="L116">    public void incrementViewCount() { viewCount++; }</span>
+    /** @return admin's rejection reason, or null */
+<span class="fc" id="L118">    public String getRejectionReason() { return rejectionReason; }</span>
+    /** @param reason rejection reason */
+<span class="fc" id="L120">    public void setRejectionReason(String reason) { this.rejectionReason = reason; }</span>
+    /** @return admin's take-down reason, or null */
+<span class="fc" id="L122">    public String getRemovalReason() { return removalReason; }</span>
+    /** @param reason take-down reason */
+<span class="fc" id="L124">    public void setRemovalReason(String reason) { this.removalReason = reason; }</span>
+    /** @return end of the current borrowing period when Lent, otherwise null */
+<span class="fc" id="L126">    public LocalDateTime getLentUntil() { return lentUntil; }</span>
+    /** @param lentUntil end of the current borrowing period, or null */
+<span class="fc" id="L128">    public void setLentUntil(LocalDateTime lentUntil) { this.lentUntil = lentUntil; }</span>
+
+<span class="nc" id="L130">    @Override public String toString() { return title; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

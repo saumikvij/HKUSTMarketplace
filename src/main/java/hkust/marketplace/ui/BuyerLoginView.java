@@ -31,7 +31,7 @@ public class BuyerLoginView {
     /** @return the screen */
     public Parent build() {
         boolean seller = role == Role.SELLER;
-        String name = seller ? "Seller" : "Buyer";
+        String name = role == Role.ADMIN ? "Admin" : seller ? "Seller" : "Buyer";
         TextField username = new TextField();
         username.setPromptText("Username");
         username.setId("login-username");
@@ -49,7 +49,9 @@ public class BuyerLoginView {
         login.setOnAction(e -> {
             try {
                 User user = app.marketplace().auth().login(username.getText(), password.getText(), role);
-                if (seller) {
+                if (role == Role.ADMIN) {
+                    app.enterAdminPortal(user);
+                } else if (seller) {
                     app.enterSellerPortal(user);
                 } else {
                     app.enterBuyerPortal(user);
@@ -69,7 +71,7 @@ public class BuyerLoginView {
 
         VBox card = new VBox(12, Ui.title(name + " login"),
                 new Label("Username"), username, new Label("Password"), password, error, login,
-                new HBox(10, back, register));
+                role == Role.ADMIN ? back : new HBox(10, back, register));
         card.getStyleClass().add("card");
         card.setMaxWidth(380);
         card.setPadding(new Insets(32));

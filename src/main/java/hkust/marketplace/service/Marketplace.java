@@ -22,6 +22,7 @@ public class Marketplace {
     private final ChatService chat;
     private final DealService deals;
     private final ReviewService reviews;
+    private final AdminService admin;
 
     /**
      * @param store data store
@@ -38,7 +39,11 @@ public class Marketplace {
         this.chat = new ChatService(store, clock, notifications);
         this.deals = new DealService(store, clock, notifications, chat);
         this.reviews = new ReviewService(store, clock, notifications);
+        this.admin = new AdminService(this);
     }
+
+    /** @return administrative operations on this marketplace */
+    public AdminService admin() { return admin; }
 
     /** @return the data store */
     public DataStore store() { return store; }

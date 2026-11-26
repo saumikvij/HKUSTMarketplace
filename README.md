@@ -1,4 +1,6 @@
-# HKUST Marketplace — Buyer and Seller Portals
+# HKUST Marketplace — Buyer, Seller and Admin Portals
+
+**Task 3 · Admin Portal (Hasnain Mohammed, Group 48).** Choose **Admin portal** on the welcome screen and sign in as `admin` / `Admin1234` on a fresh dataset. See [Admin implementation, demonstration and assessment evidence](docs/task3/README.md).
 
 COMP3111 group project, Group 48. Task 1 (Buyer Portal, subtasks 1.1–1.10) by **Saumik Vij** (21010852, svij@connect.ust.hk).
 
@@ -66,11 +68,13 @@ src/main/java/hkust/marketplace/
   service/                all business rules, no JavaFX → fully unit-testable
   util/                   validation, PBKDF2 password hashing, ids, exceptions
   ui/                     JavaFX screens + style.css
-src/test/java/            105 JUnit 5 tests
+src/test/java/            131 JUnit 5 tests (Buyer 105, Seller 11, Admin 15)
 docs/                     screenshots, test report, coverage report, JavaDoc, supplementary notes
 ```
 
-## Task 1 reports supplied with the base project
+## Buyer portal assessment evidence (Task 1)
+
+The figures below are from Saumik’s original Buyer submission.
 
 - `docs/Task1_Supplementary_Notes.pdf`: screenshots with sample inputs and outputs, test and coverage summary, design notes, assumptions.
 - `docs/test-report/index.html`: **105 / 105 tests passed**.
