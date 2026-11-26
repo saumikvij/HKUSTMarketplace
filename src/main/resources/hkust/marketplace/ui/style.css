@@ -1,76 +1,254 @@
-/* HKUST Marketplace shared stylesheet (Buyer, Seller and Admin portals). */
+/*
+ * HKUST Marketplace shared stylesheet (Buyer, Seller and Admin portals).
+ * Theme "Market Stall": warm paper surfaces, ink text, a coral call-to-action colour,
+ * deep teal for selection and money, and mustard for ratings and offers.
+ * Typeface: Manrope (SIL Open Font License, see fonts/OFL.txt).
+ */
+@font-face { font-family: "Manrope"; src: url("fonts/Manrope-Regular.ttf"); }
+@font-face { font-family: "Manrope"; src: url("fonts/Manrope-Bold.ttf"); }
+@font-face { font-family: "Manrope"; src: url("fonts/Manrope-ExtraBold.ttf"); }
+
+/* ---------- palette (looked-up colours) ---------- */
 .root {
-    -fx-font-family: "Segoe UI", "Helvetica Neue", "Arial", sans-serif;
+    mkt-paper: #f5f1e8;
+    mkt-surface: #fffdf8;
+    mkt-sand: #ece5d8;
+    mkt-sand-dark: #e2d9c8;
+    mkt-line: #e0d8c9;
+    mkt-line-strong: #d3c8b5;
+    mkt-ink: #1e1c19;
+    mkt-ink-soft: #4a453d;
+    mkt-muted-ink: #7a7266;
+    mkt-coral: #e0533a;
+    mkt-coral-dark: #c4432c;
+    mkt-coral-tint: #fbe1d9;
+    mkt-teal: #24685c;
+    mkt-teal-tint: #d6ebe5;
+    mkt-mustard: #c9962a;
+    mkt-mustard-tint: #f7eac6;
+    mkt-danger: #b42318;
+
+    -fx-font-family: "Manrope";
     -fx-font-size: 13px;
-    -fx-base: #f4f6fa;
-    -fx-accent: #003366;
-    -fx-focus-color: #1f5fa8;
-    -fx-faint-focus-color: #1f5fa822;
+    -fx-base: #ece5d8;
+    -fx-background: mkt-paper;
+    -fx-control-inner-background: mkt-surface;
+    -fx-control-inner-background-alt: #faf6ee;
+    -fx-accent: mkt-teal;
+    -fx-default-button: mkt-coral;
+    -fx-focus-color: mkt-coral;
+    -fx-faint-focus-color: #e0533a22;
+    -fx-selection-bar: mkt-teal;
+    -fx-selection-bar-non-focused: mkt-teal-tint;
+    -fx-box-border: mkt-line-strong;
+    -fx-text-box-border: mkt-line-strong;
+    -fx-mark-color: mkt-ink;
+    -fx-dark-text-color: mkt-ink;
+    -fx-mid-text-color: mkt-ink-soft;
+    -fx-light-text-color: #ffffff;
 }
-.app-root { -fx-background-color: #f4f6fa; }
-.label { -fx-text-fill: #1d2733; }
+.app-root { -fx-background-color: mkt-paper; }
+.label { -fx-text-fill: mkt-ink; }
 
-.sidebar { -fx-background-color: #003366; }
-.brand { -fx-text-fill: #ffffff; -fx-font-size: 17px; -fx-font-weight: bold; }
-.sidebar-user { -fx-text-fill: #c9d6ea; -fx-padding: 4 0 12 0; }
-.menu-item {
-    -fx-background-color: transparent; -fx-text-fill: #e6edf7; -fx-alignment: center-left;
-    -fx-padding: 9 12 9 12; -fx-background-radius: 6; -fx-cursor: hand;
+/* ---------- sidebar ---------- */
+.sidebar {
+    -fx-background-color: mkt-sand;
+    -fx-border-color: transparent mkt-line-strong transparent transparent;
+    -fx-border-width: 0 1 0 0;
 }
-.menu-item:hover { -fx-background-color: #1a4a7a; }
-.menu-selected { -fx-background-color: #b8862b; -fx-text-fill: #ffffff; -fx-font-weight: bold; }
-.menu-selected:hover { -fx-background-color: #b8862b; }
+.brand {
+    -fx-text-fill: mkt-ink; -fx-font-size: 19px; -fx-font-weight: 800;
+    -fx-border-color: transparent transparent mkt-coral transparent;
+    -fx-border-width: 0 0 3 0; -fx-padding: 0 0 4 0;
+}
+.sidebar-user { -fx-text-fill: mkt-muted-ink; -fx-padding: 6 0 14 0; }
+/* ---------- type ---------- */
+.page-title { -fx-font-size: 26px; -fx-font-weight: 800; -fx-text-fill: mkt-ink; }
+.hero-title {
+    -fx-font-size: 34px; -fx-font-weight: 800; -fx-text-fill: mkt-ink;
+    -fx-border-color: transparent transparent mkt-coral transparent;
+    -fx-border-width: 0 0 4 0; -fx-padding: 0 0 6 0;
+}
+.section-title { -fx-font-size: 16px; -fx-font-weight: 800; -fx-text-fill: mkt-ink; }
+.muted { -fx-text-fill: mkt-muted-ink; }
+.field-label { -fx-font-weight: bold; -fx-text-fill: mkt-ink-soft; }
+.error-text { -fx-text-fill: mkt-danger; -fx-font-weight: bold; }
+.hyperlink { -fx-text-fill: mkt-coral-dark; -fx-font-weight: bold; -fx-border-color: transparent; }
+.hyperlink:visited { -fx-text-fill: mkt-coral-dark; }
 
-.page-title { -fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #0f2340; }
-.hero-title { -fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #003366; }
-.section-title { -fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #0f2340; }
-.muted { -fx-text-fill: #5f6b7a; }
-.field-label { -fx-font-weight: bold; -fx-text-fill: #33404f; }
-.error-text { -fx-text-fill: #b3261e; -fx-font-weight: bold; }
+/* ---------- buttons ---------- */
+.button, .toggle-button {
+    -fx-background-color: mkt-surface; -fx-background-insets: 0; -fx-background-radius: 12;
+    -fx-border-color: mkt-line-strong; -fx-border-radius: 12; -fx-border-width: 1;
+    -fx-text-fill: mkt-ink; -fx-font-weight: bold; -fx-padding: 7 16 7 16; -fx-cursor: hand;
+}
+.button:hover, .toggle-button:hover { -fx-background-color: #f1eadd; }
+.button:pressed, .toggle-button:pressed { -fx-background-color: mkt-sand-dark; }
+.button:focused, .toggle-button:focused { -fx-border-color: mkt-coral; }
+.toggle-button:selected { -fx-background-color: mkt-ink; -fx-border-color: mkt-ink; -fx-text-fill: mkt-surface; }
+.button:disabled, .toggle-button:disabled { -fx-opacity: 0.45; }
+.button.primary, .button:default {
+    -fx-background-color: mkt-coral; -fx-border-color: mkt-coral; -fx-text-fill: #ffffff;
+}
+.button.primary:hover, .button:default:hover { -fx-background-color: mkt-coral-dark; -fx-border-color: mkt-coral-dark; }
+.button.primary:focused, .button:default:focused { -fx-border-color: mkt-ink; }
+.button.danger-link {
+    -fx-background-color: transparent; -fx-border-color: transparent;
+    -fx-text-fill: mkt-danger; -fx-underline: true;
+}
 
-.button { -fx-background-radius: 6; -fx-padding: 6 14 6 14; -fx-cursor: hand; }
-.button.primary { -fx-background-color: #003366; -fx-text-fill: white; -fx-font-weight: bold; }
-.button.primary:hover { -fx-background-color: #1f5fa8; }
-.button.primary:disabled { -fx-opacity: 0.45; }
-.danger-link { -fx-background-color: transparent; -fx-text-fill: #b3261e; -fx-underline: true; }
+/* sidebar navigation buttons (after the generic button rules so they win) */
+.button.menu-item, .button.menu-item:focused {
+    -fx-background-color: transparent; -fx-border-color: transparent;
+    -fx-text-fill: mkt-ink-soft; -fx-alignment: center-left; -fx-font-weight: bold;
+    -fx-padding: 10 14 10 14; -fx-background-radius: 12; -fx-cursor: hand;
+}
+.button.menu-item:hover { -fx-background-color: mkt-sand-dark; }
+.button.menu-selected, .button.menu-selected:hover, .button.menu-selected:focused { -fx-background-color: mkt-ink; -fx-text-fill: mkt-surface; }
 
+
+/* ---------- inputs ---------- */
+.text-field, .password-field {
+    -fx-background-color: mkt-surface; -fx-background-insets: 0; -fx-background-radius: 12;
+    -fx-border-color: mkt-line-strong; -fx-border-radius: 12; -fx-border-width: 1;
+    -fx-padding: 7 10 7 10; -fx-text-fill: mkt-ink; -fx-prompt-text-fill: #a39a8c;
+    -fx-highlight-fill: mkt-teal; -fx-highlight-text-fill: #ffffff;
+}
+.text-field:focused, .password-field:focused { -fx-border-color: mkt-coral; -fx-border-width: 1.5; }
+.text-area {
+    -fx-background-color: mkt-surface; -fx-background-insets: 0; -fx-background-radius: 12;
+    -fx-border-color: mkt-line-strong; -fx-border-radius: 12; -fx-border-width: 1;
+    -fx-padding: 2; -fx-text-fill: mkt-ink; -fx-prompt-text-fill: #a39a8c;
+    -fx-highlight-fill: mkt-teal; -fx-highlight-text-fill: #ffffff;
+}
+.text-area:focused { -fx-border-color: mkt-coral; -fx-border-width: 1.5; }
+.text-area .content { -fx-background-color: mkt-surface; -fx-background-radius: 11; -fx-padding: 5 8 5 8; }
+.text-area .scroll-pane { -fx-background-color: transparent; }
+
+.combo-box-base, .choice-box {
+    -fx-background-color: mkt-surface; -fx-background-insets: 0; -fx-background-radius: 12;
+    -fx-border-color: mkt-line-strong; -fx-border-radius: 12; -fx-border-width: 1; -fx-cursor: hand;
+}
+.combo-box-base:hover, .choice-box:hover { -fx-background-color: #f1eadd; }
+.combo-box-base:focused, .choice-box:focused { -fx-border-color: mkt-coral; }
+.combo-box-base .arrow, .choice-box .open-button .arrow { -fx-background-color: mkt-ink-soft; }
+.combo-box-base .arrow-button, .choice-box .open-button { -fx-background-color: transparent; }
+.combo-box .list-cell { -fx-text-fill: mkt-ink; -fx-background-color: transparent; }
+.date-picker .text-field {
+    -fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 6 8 6 10;
+}
+.combo-box-popup .list-view, .context-menu {
+    -fx-background-color: mkt-surface; -fx-border-color: mkt-line-strong; -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.check-box .box {
+    -fx-background-color: mkt-surface; -fx-background-radius: 6;
+    -fx-border-color: mkt-line-strong; -fx-border-radius: 6;
+}
+.check-box:selected .box { -fx-background-color: mkt-teal; -fx-border-color: mkt-teal; }
+.check-box:selected .mark { -fx-background-color: #ffffff; }
+
+/* ---------- cards and listings ---------- */
 .card {
-    -fx-background-color: white; -fx-background-radius: 10; -fx-border-radius: 10;
-    -fx-border-color: #dde3ec; -fx-effect: dropshadow(gaussian, rgba(15,35,64,0.08), 8, 0, 0, 2);
+    -fx-background-color: mkt-surface; -fx-background-radius: 18; -fx-border-radius: 18;
+    -fx-border-color: mkt-line; -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(30,28,25,0.06), 14, 0, 0, 4);
 }
-.listing-card:hover { -fx-border-color: #1f5fa8; }
-.card-title { -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #0f2340; }
-.price { -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #0b6b3a; }
-.price-large { -fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #0b6b3a; }
-.stars { -fx-text-fill: #d49a00; -fx-font-size: 16px; }
-.reply { -fx-background-color: #eef3fa; -fx-padding: 6 8 6 8; -fx-background-radius: 6; }
+.listing-card:hover { -fx-border-color: mkt-coral; -fx-border-width: 1.5; }
+.card-title { -fx-font-size: 15px; -fx-font-weight: 800; -fx-text-fill: mkt-ink; }
+.price { -fx-font-size: 17px; -fx-font-weight: 800; -fx-text-fill: mkt-teal; }
+.price-large { -fx-font-size: 24px; -fx-font-weight: 800; -fx-text-fill: mkt-teal; }
+.stars { -fx-text-fill: mkt-mustard; -fx-font-size: 16px; }
+.reply { -fx-background-color: #f1eadd; -fx-padding: 7 10 7 10; -fx-background-radius: 12; }
 
-.badge { -fx-padding: 2 8 2 8; -fx-background-radius: 10; -fx-font-size: 11px; -fx-font-weight: bold; }
-.badge-sell { -fx-background-color: #dbe8fb; -fx-text-fill: #1f4f8f; }
-.badge-lend { -fx-background-color: #efe0fa; -fx-text-fill: #6a2c91; }
-.badge-giveaway { -fx-background-color: #d9f2e3; -fx-text-fill: #0b6b3a; }
-.badge-ok { -fx-background-color: #d9f2e3; -fx-text-fill: #0b6b3a; }
-.badge-warn { -fx-background-color: #fff0cc; -fx-text-fill: #7a5200; }
-.badge-info { -fx-background-color: #e4e9f1; -fx-text-fill: #33404f; }
+.badge { -fx-padding: 3 10 3 10; -fx-background-radius: 20; -fx-font-size: 11px; -fx-font-weight: 800; }
+.badge-sell { -fx-background-color: mkt-coral-tint; -fx-text-fill: #a6361f; }
+.badge-lend { -fx-background-color: mkt-teal-tint; -fx-text-fill: #1c5a4f; }
+.badge-giveaway { -fx-background-color: mkt-mustard-tint; -fx-text-fill: #7a5a0c; }
+.badge-ok { -fx-background-color: #e1efd8; -fx-text-fill: #33692a; }
+.badge-warn { -fx-background-color: #fbe9c8; -fx-text-fill: #8a5a00; }
+.badge-info { -fx-background-color: mkt-sand; -fx-text-fill: mkt-ink-soft; }
 
-.photo-frame { -fx-background-color: #eef1f6; -fx-background-radius: 8; }
-.photo-placeholder { -fx-background-color: #e4e9f1; -fx-background-radius: 8; }
+.photo-frame { -fx-background-color: #efe8db; -fx-background-radius: 14; }
+.photo-placeholder { -fx-background-color: mkt-sand; -fx-background-radius: 14; }
+.photo-placeholder .label { -fx-text-fill: mkt-muted-ink; }
 
-.plain-scroll { -fx-background-color: transparent; -fx-background: #f4f6fa; -fx-padding: 0; }
+.plain-scroll { -fx-background-color: transparent; -fx-background: mkt-paper; -fx-padding: 0; }
 .plain-scroll > .viewport { -fx-background-color: transparent; }
-.detail-root { -fx-background: #ffffff; -fx-background-color: #ffffff; }
+.detail-root { -fx-background: mkt-surface; -fx-background-color: mkt-surface; }
 
-.bubble-mine { -fx-background-color: #003366; -fx-background-radius: 12; -fx-padding: 8 10 8 10; }
-.bubble-mine .label { -fx-text-fill: white; }
-.bubble-mine .muted { -fx-text-fill: #c9d6ea; }
-.bubble-theirs { -fx-background-color: white; -fx-border-color: #dde3ec; -fx-background-radius: 12;
-    -fx-border-radius: 12; -fx-padding: 8 10 8 10; }
-.offer-card { -fx-background-color: #fff6df; -fx-border-color: #b8862b; -fx-border-width: 1.5;
-    -fx-background-radius: 10; -fx-border-radius: 10; -fx-padding: 8 10 8 10; }
+/* ---------- chat ---------- */
+.bubble-mine { -fx-background-color: mkt-ink; -fx-background-radius: 16 16 4 16; -fx-padding: 9 12 9 12; }
+.bubble-mine .label { -fx-text-fill: mkt-surface; }
+.bubble-mine .muted { -fx-text-fill: #bdb5a8; }
+.bubble-theirs {
+    -fx-background-color: mkt-surface; -fx-border-color: mkt-line; -fx-background-radius: 16 16 16 4;
+    -fx-border-radius: 16 16 16 4; -fx-padding: 9 12 9 12;
+}
+.offer-card {
+    -fx-background-color: #fff3d6; -fx-border-color: mkt-mustard; -fx-border-width: 1.5;
+    -fx-background-radius: 14; -fx-border-radius: 14; -fx-padding: 9 12 9 12;
+}
 
-.notif-title { -fx-text-fill: #33404f; }
-.notif-title-unread { -fx-text-fill: #0f2340; -fx-font-weight: bold; }
+.notif-title { -fx-text-fill: mkt-ink-soft; }
+.notif-title-unread { -fx-text-fill: mkt-ink; -fx-font-weight: 800; }
 
-.table-view { -fx-background-color: white; -fx-background-radius: 8; }
-.table-view .column-header { -fx-font-weight: bold; }
-.tab-pane .tab:selected { -fx-background-color: white; }
+/* ---------- tables, lists, tabs ---------- */
+.table-view, .list-view {
+    -fx-background-color: mkt-line, mkt-surface; -fx-background-insets: 0, 1;
+    -fx-background-radius: 14, 13; -fx-padding: 1; -fx-table-cell-border-color: #efe8db;
+}
+.table-view .column-header-background { -fx-background-color: mkt-sand; -fx-background-radius: 13 13 0 0; }
+.table-view .column-header, .table-view .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent mkt-line-strong transparent transparent; -fx-border-width: 0 1 0 0;
+}
+.table-view .column-header .label { -fx-font-weight: 800; -fx-text-fill: mkt-ink; }
+.table-view .placeholder .label { -fx-text-fill: mkt-muted-ink; }
+
+.tab-pane > .tab-header-area > .tab-header-background { -fx-background-color: transparent; }
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: mkt-sand; -fx-background-radius: 12 12 0 0; -fx-padding: 5 14 5 14;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab:selected { -fx-background-color: mkt-ink; }
+.tab-pane > .tab-header-area > .headers-region > .tab .tab-label { -fx-text-fill: mkt-ink-soft; -fx-font-weight: bold; }
+.tab-pane > .tab-header-area > .headers-region > .tab:selected .tab-label { -fx-text-fill: mkt-surface; }
+
+.scroll-bar { -fx-background-color: transparent; }
+.scroll-bar > .thumb { -fx-background-color: mkt-line-strong; -fx-background-radius: 8; -fx-background-insets: 2; }
+.scroll-bar > .thumb:hover { -fx-background-color: #bfb3a0; }
+.scroll-bar > .increment-button, .scroll-bar > .decrement-button {
+    -fx-background-color: transparent; -fx-padding: 0 4 0 4;
+}
+.scroll-bar > .increment-button > .increment-arrow, .scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-background-color: transparent;
+}
+
+/* ---------- dialogs ---------- */
+.dialog-pane { -fx-background-color: mkt-surface; }
+.dialog-pane > .header-panel { -fx-background-color: mkt-sand; -fx-border-color: transparent transparent mkt-coral transparent; -fx-border-width: 0 0 3 0; }
+.dialog-pane > .header-panel .label { -fx-font-size: 15px; -fx-font-weight: 800; -fx-text-fill: mkt-ink; }
+.dialog-pane > .content.label { -fx-text-fill: mkt-ink-soft; }
+
+/* ---------- charts (seller statistics) ---------- */
+.chart-title { -fx-font-size: 15px; -fx-font-weight: 800; -fx-text-fill: mkt-ink; }
+.chart-plot-background { -fx-background-color: transparent; }
+.chart-vertical-grid-lines, .chart-horizontal-grid-lines { -fx-stroke: #e6dfd2; }
+.axis { -fx-tick-label-fill: mkt-ink-soft; }
+.axis-label { -fx-text-fill: mkt-ink-soft; }
+.chart-legend { -fx-background-color: transparent; }
+.default-color0.chart-bar { -fx-bar-fill: mkt-coral; -fx-background-radius: 6 6 0 0; }
+.default-color1.chart-bar { -fx-bar-fill: mkt-teal; }
+.default-color2.chart-bar { -fx-bar-fill: mkt-mustard; }
+.default-color0.chart-pie { -fx-pie-color: mkt-coral; }
+.default-color1.chart-pie { -fx-pie-color: mkt-teal; }
+.default-color2.chart-pie { -fx-pie-color: mkt-mustard; }
+.default-color3.chart-pie { -fx-pie-color: #6b5b95; }
+.default-color4.chart-pie { -fx-pie-color: #8c8273; }
+.default-color5.chart-pie { -fx-pie-color: #3e8ec4; }
+.default-color6.chart-pie { -fx-pie-color: #b5517a; }
+.default-color7.chart-pie { -fx-pie-color: #5f8a3a; }
+.chart-pie { -fx-border-color: mkt-surface; -fx-border-width: 2; }
+.chart-pie-label { -fx-fill: mkt-ink-soft; }
+.chart-pie-label-line { -fx-stroke: mkt-line-strong; -fx-fill: transparent; }

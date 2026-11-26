@@ -245,7 +245,7 @@ public final class ChatWindow {
                 while (matcher.find()) {
                     flow.getChildren().add(new javafx.scene.text.Text(message.substring(end, matcher.start())));
                     var match = new javafx.scene.text.Text(matcher.group());
-                    match.setStyle("-fx-font-weight: bold; -fx-fill: #8a4300;");
+                    match.setStyle("-fx-font-weight: bold; -fx-fill: #a6361f;");
                     flow.getChildren().add(match);
                     end = matcher.end();
                 }

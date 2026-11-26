@@ -40,6 +40,7 @@ final class SellerPortal {
         Button listings = add(sidebar, "My Listings", () -> new SellerListingsView(this));
         add(sidebar, "Create Listing", () -> new SellerListingForm(this, null));
         add(sidebar, "Offers and Requests", () -> new SellerRequestsView(this, null));
+        add(sidebar, "Messages", () -> new MessagesView(app, null));
         add(sidebar, "Seller Stats", () -> new SellerStatsView(this));
         add(sidebar, "Reviews", () -> new SellerReviewsView(this));
         notifications = add(sidebar, "Notifications", () -> new SellerNotificationsView(this));

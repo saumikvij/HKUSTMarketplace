@@ -70,7 +70,7 @@ src/main/java/hkust/marketplace/
   service/                all business rules, no JavaFX → fully unit-testable
   util/                   validation, PBKDF2 password hashing, ids, exceptions
   ui/                     JavaFX screens + style.css
-src/test/java/            131 JUnit 5 tests (Buyer 105, Seller 11, Admin 15)
+src/test/java/            132 JUnit 5 tests (Buyer 106, Seller 11, Admin 15)
 docs/                     screenshots, test report, coverage report, JavaDoc, supplementary notes
 ```
 

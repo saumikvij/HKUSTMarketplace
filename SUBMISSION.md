@@ -39,12 +39,12 @@ The `admin` account exists in both modes.
 ## 2. Screenshots (sample inputs and outputs)
 
 ### Task 1 · Buyer Portal (Saumik)
-There are 51 annotated screenshots in [Task1_Supplementary_Notes.pdf](docs/Task1_Supplementary_Notes.pdf), section 6, with the image files in [docs/screenshots](docs/screenshots). They cover:
+There are 53 annotated screenshots in [Task1_Supplementary_Notes.pdf](docs/Task1_Supplementary_Notes.pdf), section 6, with the image files in [docs/screenshots](docs/screenshots). They cover:
 - registering and logging in, including validation errors;
 - browsing with search, filters and sorting, and an invalid price range;
 - listing details;
 - offers, borrow requests and giveaway claims, including invalid input;
-- chat with offer cards and message search;
+- chat with offer cards and message search, and the Messages tab that lists every conversation;
 - My Deals: counter-offers, mark complete, and the live borrow countdown and auto-return;
 - the notification board, deal history and filters, rate-and-review, and profile changes.
 
@@ -64,6 +64,7 @@ Also see Aryan's screenshots for each subtask, 2.1 to 2.9, in [docs/task2-screen
 | ![](docs/final/screenshots/task2-seller/s16_seller_stats.png) | Seller statistics: views, requests, completed deals, average rating and charts |
 | ![](docs/final/screenshots/task2-seller/s17_reply_to_review.png) | Reply "Thanks Demo, glad it fit well!" → ![](docs/final/screenshots/task2-seller/s18_review_replied.png) |
 | ![](docs/final/screenshots/task2-seller/s21_seller_chat_with_offer_cards.png) | The seller's view of the chat, with the offer and counter-offer cards |
+| ![](docs/final/screenshots/task2-seller/s22_seller_messages_tab.png) | Messages tab: every conversation with buyers, newest first → ![](docs/final/screenshots/task2-seller/s23_seller_chat_from_messages_tab.png) double-click opens the chat |
 | ![](docs/final/screenshots/task2-seller/s19_seller_notifications.png) | Seller notifications · ![](docs/final/screenshots/task2-seller/s20_seller_profile.png) Seller profile |
 
 ### Task 3 · Admin Portal (Hasnain)
@@ -80,6 +81,8 @@ Also see [docs/task3/README.md](docs/task3/README.md).
 | ![](docs/final/screenshots/task3-admin/a12_admin_notifications.png) | Admin notifications: submissions, reports and new accounts |
 
 ### All three portals working together
+All three portals share one stylesheet (`src/main/resources/hkust/marketplace/ui/style.css`): warm paper backgrounds, ink text, coral actions, teal for prices and selection, and the bundled Manrope typeface. Buyers and sellers both have a **Messages** tab listing all their conversations (Task 1 screenshots 52–53, Task 2 screenshots s22–s23).
+
 | Screen | What it shows |
 |---|---|
 | ![](docs/final/screenshots/integration/b01_buyer_sees_approved_listing.png) | The keyboard the seller submitted and the admin approved now appears in the buyer's Browse page |

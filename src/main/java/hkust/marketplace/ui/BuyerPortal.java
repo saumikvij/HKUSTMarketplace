@@ -43,6 +43,7 @@ public class BuyerPortal {
         side.setMinWidth(210);
         addMenu(side, "Browse Marketplace", () -> new BrowseView(app, this));
         addMenu(side, "My Deals", () -> new MyDealsView(app, this));
+        addMenu(side, "Messages", () -> new MessagesView(app, this));
         addMenu(side, "Deal History", () -> new HistoryView(app, this));
         notificationsButton = addMenu(side, "Notifications", () -> new NotificationsView(app, this));
         addMenu(side, "My Reviews", () -> new MyReviewsView(app));
