@@ -1,7 +1,11 @@
 package hkust.marketplace.service;
 
 import hkust.marketplace.data.DataStore;
+import hkust.marketplace.model.*;
 import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.EnumMap;
+import java.util.OptionalDouble;
 
 /**
  * Creates and wires every service around one data store and clock. Screens get services from here, so the
@@ -14,6 +18,7 @@ public class Marketplace {
     private final AuthService auth;
     private final ProfileService profile;
     private final ListingService listings;
+    private final SellerListingService sellerListings;
     private final ChatService chat;
     private final DealService deals;
     private final ReviewService reviews;
@@ -29,6 +34,7 @@ public class Marketplace {
         this.auth = new AuthService(store, clock);
         this.profile = new ProfileService(store);
         this.listings = new ListingService(store, clock, notifications);
+        this.sellerListings = new SellerListingService(store, clock, notifications);
         this.chat = new ChatService(store, clock, notifications);
         this.deals = new DealService(store, clock, notifications, chat);
         this.reviews = new ReviewService(store, clock, notifications);
@@ -52,4 +58,32 @@ public class Marketplace {
     public DealService deals() { return deals; }
     /** @return ratings and reviews (1.10) */
     public ReviewService reviews() { return reviews; }
+    /** @return seller listing management (2.3 and 2.4) */
+    public SellerListingService sellerListings() { return sellerListings; }
+
+    /** Calculates seller counts and chart values from one consistent store snapshot. */
+    public SellerStats sellerStats(String sellerId) {
+        synchronized (store) {
+            var ownListings = sellerListings.forSeller(sellerId);
+            var ownDeals = deals.dealsForSeller(sellerId, null);
+            var visibleReviews = reviews.visibleReviewsForSeller(sellerId);
+            var requestCounts = new EnumMap<ListingType, Long>(ListingType.class);
+            var statusCounts = new EnumMap<ListingStatus, Long>(ListingStatus.class);
+            for (Deal deal : ownDeals) {
+                ListingType type = switch (deal.getType()) {
+                    case OFFER -> ListingType.SELL;
+                    case BORROW -> ListingType.LEND;
+                    case CLAIM -> ListingType.GIVEAWAY;
+                };
+                requestCounts.merge(type, 1L, Long::sum);
+            }
+            ownListings.stream().map(Listing::getStatus).filter(status -> status != ListingStatus.REMOVED)
+                    .forEach(status -> statusCounts.merge(status, 1L, Long::sum));
+            long views = ownListings.stream().mapToLong(Listing::getViewCount).sum();
+            long completed = ownDeals.stream().filter(deal -> deal.getStatus().isFinished()).count();
+            OptionalDouble rating = visibleReviews.stream().mapToInt(Review::getRating).average();
+            return new SellerStats(views, ownDeals.size(), completed, visibleReviews.size(), rating,
+                    requestCounts, statusCounts, LocalDateTime.now(clock));
+        }
+    }
 }

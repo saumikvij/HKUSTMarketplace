@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="hkust.marketplace.service.DealServiceTest" time="1.801" tests="36" errors="0" skipped="0" failures="0">
+  <testcase name="acceptCounterOfferUsesTheCounterPrice" classname="hkust.marketplace.service.DealServiceTest" time="0.053" />
+  <testcase name="historyDateValidation" classname="hkust.marketplace.service.DealServiceTest" time="0.049" />
+  <testcase name="markCompleteGivesAwayAndDeclinesOthers" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="returnOnlyForBorrowedDeals" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="counterBorrowPeriodAndAccept" classname="hkust.marketplace.service.DealServiceTest" time="0.051" />
+  <testcase name="claimReservesImmediatelyAndSecondClaimFails" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="counterRules" classname="hkust.marketplace.service.DealServiceTest" time="0.052" />
+  <testcase name="offerPriceValidation" classname="hkust.marketplace.service.DealServiceTest" time="0.049" />
+  <testcase name="offerCreatesPendingDealChatCardAndSellerNotification" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="acceptOfferReservesListingAndDeclinesOthers" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="sellerChecks" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="expiredCounterPeriodCannotBeAccepted" classname="hkust.marketplace.service.DealServiceTest" time="0.05" />
+  <testcase name="borrowRequestStoresThePeriod" classname="hkust.marketplace.service.DealServiceTest" time="0.054" />
+  <testcase name="autoReturnKeepsRemovedListingRemoved" classname="hkust.marketplace.service.DealServiceTest" time="0.058" />
+  <testcase name="declinedClaimMakesGiveawayLiveAgain" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="declineSeededCounterOffer" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="markCompleteOnPurchaseMarksSold" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="lendingLimitZeroMeansNoMaximum" classname="hkust.marketplace.service.DealServiceTest" time="0.053" />
+  <testcase name="returnAfterDueTimeReportsAutoReturn" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="returnBorrowedItemEarly" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="concurrentClaimsOnlyOneWins" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="withdrawPendingAndCounteredRequests" classname="hkust.marketplace.service.DealServiceTest" time="0.049" />
+  <testcase name="historySkipsDealsWhoseListingIsGone" classname="hkust.marketplace.service.DealServiceTest" time="0.049" />
+  <testcase name="withdrawingAClaimReopensTheGiveaway" classname="hkust.marketplace.service.DealServiceTest" time="0.051" />
+  <testcase name="longLoanReminderOneDayBefore" classname="hkust.marketplace.service.DealServiceTest" time="0.049" />
+  <testcase name="secondOfferNeedsReplaceAndReplacingWithdrawsTheFirst" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="remainingAndFormatDuration" classname="hkust.marketplace.service.DealServiceTest" time="0.05" />
+  <testcase name="activeAndClosedLists" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="historyShowsFinishedDealsWithFilters" classname="hkust.marketplace.service.DealServiceTest" time="0.049" />
+  <testcase name="acceptBorrowLendsTheItem" classname="hkust.marketplace.service.DealServiceTest" time="0.052" />
+  <testcase name="acceptClaimKeepsReservedAndDeclineReopens" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="offerOnlyOnLiveSellListingOfActiveSeller" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="shortLoanGetsReminderAtHalfTimeThenAutoReturn" classname="hkust.marketplace.service.DealServiceTest" time="0.048" />
+  <testcase name="borrowPeriodRules" classname="hkust.marketplace.service.DealServiceTest" time="0.049" />
+  <testcase name="markCompleteRules" classname="hkust.marketplace.service.DealServiceTest" time="0.052" />
+  <testcase name="borrowOnlyForLendListings" classname="hkust.marketplace.service.DealServiceTest" time="0.049" />
+</testsuite>

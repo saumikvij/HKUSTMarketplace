@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="hkust.marketplace.service.SellerPortalServiceTest" time="0.809" tests="11" errors="0" skipped="0" failures="0">
+  <testcase name="sellerCanUpdateProfileAndPasswordWithoutOverwritingNewerProfile" classname="hkust.marketplace.service.SellerPortalServiceTest" time="0.102" />
+  <testcase name="failedSellerSubmissionRollsBackListingAndAdminNotification(Path)" classname="hkust.marketplace.service.SellerPortalServiceTest" time="0.178" />
+  <testcase name="sellerCounterShowsInBuyerDealsAndBothSidesShareChat" classname="hkust.marketplace.service.SellerPortalServiceTest" time="0.056" />
+  <testcase name="registersSellerAndUsesCaseInsensitiveRoleCheck" classname="hkust.marketplace.service.SellerPortalServiceTest" time="0.104" />
+  <testcase name="invalidListingNeverSavesOrNotifiesAdmin" classname="hkust.marketplace.service.SellerPortalServiceTest" time="0.049" />
+  <testcase name="sellerCanReplyAndFlagWithRecipientAndRatingChecks" classname="hkust.marketplace.service.SellerPortalServiceTest" time="0.057" />
+  <testcase name="buyerOffersAndLendingCountOnceAndRejectedClaimReleasesListing" classname="hkust.marketplace.service.SellerPortalServiceTest" time="0.054" />
+  <testcase name="submitsEachListingTypeAndDoesNotDuplicateFormSubmission" classname="hkust.marketplace.service.SellerPortalServiceTest" time="0.048" />
+  <testcase name="notificationsAreOwnedAndStatsDoNotCountAsViews" classname="hkust.marketplace.service.SellerPortalServiceTest" time="0.052" />
+  <testcase name="revisionsAndOpenOffersProtectListings" classname="hkust.marketplace.service.SellerPortalServiceTest" time="0.052" />
+  <testcase name="rejectsDuplicateUsernameAndInvalidSellerRegistrationFields" classname="hkust.marketplace.service.SellerPortalServiceTest" time="0.048" />
+</testsuite>

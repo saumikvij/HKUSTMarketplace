@@ -1,8 +1,12 @@
-# HKUST Marketplace — Task 1: Buyer Portal
+# HKUST Marketplace — Buyer and Seller Portals
 
 COMP3111 group project, Group 48. Task 1 (Buyer Portal, subtasks 1.1–1.10) by **Saumik Vij** (21010852, svij@connect.ust.hk).
 
 Java 21 · JavaFX 21 · Maven · JUnit 5 · JaCoCo
+
+Task 2 adds the Seller Portal (2.1–2.9) to the Task 1 project. See
+[Task 2 supplementary notes](docs/Task2_Supplementary_Notes.md) for the subtask map,
+demo inputs, verification status, and Admin Portal integration points.
 
 ## Run it
 
@@ -50,7 +54,7 @@ On the first start the app creates `marketplace-data.ser` in the working folder 
 | 1.9 Deal History | Keyword, date range, category and type filters | `DealService.history`, `HistoryQuery`, `HistoryView` |
 | 1.10 Rate & review | Review after a finished deal, My Reviews | `ReviewService`, `ReviewDialog`, `MyReviewsView` |
 
-Seller-side rules that the buyer flows depend on (accept, decline, counter) are already in `DealService` for the Seller Portal (Task 2) to call.
+The Seller Portal uses the shared `DealService` for accept, decline, and counter actions. Buyer My Deals reads the same records.
 
 ## Project layout
 
@@ -66,7 +70,7 @@ src/test/java/            105 JUnit 5 tests
 docs/                     screenshots, test report, coverage report, JavaDoc, supplementary notes
 ```
 
-## Reports (already generated in `docs/`)
+## Task 1 reports supplied with the base project
 
 - `docs/Task1_Supplementary_Notes.pdf`: screenshots with sample inputs and outputs, test and coverage summary, design notes, assumptions.
 - `docs/test-report/index.html`: **105 / 105 tests passed**.

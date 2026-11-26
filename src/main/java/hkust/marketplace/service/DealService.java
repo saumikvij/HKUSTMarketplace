@@ -172,8 +172,8 @@ public class DealService {
      * @throws MarketplaceException if the deal or listing changed meanwhile
      */
     public Deal acceptDeal(String sellerId, String dealId) {
-        Access.requireSeller(store, sellerId);
         synchronized (store) {
+            Access.requireSeller(store, sellerId);
             Deal deal = requireDeal(dealId);
             Listing listing = requireSellerListing(sellerId, deal);
             if (deal.getStatus() != DealStatus.PENDING) {
@@ -185,12 +185,13 @@ public class DealService {
             if (!available) {
                 throw new MarketplaceException("This listing is no longer available.");
             }
-            allocate(deal, listing);
-            notifications.notify(deal.getBuyerId(), NotificationCategory.DEALS, "Offer accepted",
-                    "Your " + deal.getType().label().toLowerCase(Locale.ROOT) + " for \"" + listing.getTitle()
-                            + "\" was accepted.", deal.getId());
-            store.commit();
-            return deal;
+            return store.transact(() -> {
+                allocate(deal, listing);
+                notifications.notify(deal.getBuyerId(), NotificationCategory.DEALS, "Offer accepted",
+                        "Your " + deal.getType().label().toLowerCase(Locale.ROOT) + " for \"" + listing.getTitle()
+                                + "\" was accepted.", deal.getId());
+                return deal;
+            });
         }
     }
 
@@ -202,20 +203,21 @@ public class DealService {
      * @throws MarketplaceException if the deal is no longer pending
      */
     public Deal declineDeal(String sellerId, String dealId) {
-        Access.requireSeller(store, sellerId);
         synchronized (store) {
+            Access.requireSeller(store, sellerId);
             Deal deal = requireDeal(dealId);
             Listing listing = requireSellerListing(sellerId, deal);
             if (deal.getStatus() != DealStatus.PENDING) {
                 throw new MarketplaceException("This request is no longer pending (" + deal.getStatus().label() + ").");
             }
-            deal.setStatus(DealStatus.DECLINED, now());
-            releaseClaimHold(deal, listing);
-            notifications.notify(deal.getBuyerId(), NotificationCategory.DEALS, "Offer declined",
-                    "Your " + deal.getType().label().toLowerCase(Locale.ROOT) + " for \"" + listing.getTitle()
-                            + "\" was declined.", deal.getId());
-            store.commit();
-            return deal;
+            return store.transact(() -> {
+                deal.setStatus(DealStatus.DECLINED, now());
+                releaseClaimHold(deal, listing);
+                notifications.notify(deal.getBuyerId(), NotificationCategory.DEALS, "Offer declined",
+                        "Your " + deal.getType().label().toLowerCase(Locale.ROOT) + " for \"" + listing.getTitle()
+                                + "\" was declined.", deal.getId());
+                return deal;
+            });
         }
     }
 
@@ -227,15 +229,17 @@ public class DealService {
      * @return the countered deal
      */
     public Deal counterOffer(String sellerId, String dealId, String priceText) {
-        Access.requireSeller(store, sellerId);
         BigDecimal price = parseOfferPrice(priceText);
         synchronized (store) {
+            Access.requireSeller(store, sellerId);
             Deal deal = requireDeal(dealId);
             Listing listing = requireCounterable(sellerId, deal, DealType.OFFER);
-            deal.setCounterPrice(price);
-            deal.setStatus(DealStatus.COUNTERED, now());
-            finishCounter(sellerId, deal, listing, "Counter-offer: HK$" + price.toPlainString());
-            return deal;
+            return store.transact(() -> {
+                deal.setCounterPrice(price);
+                deal.setStatus(DealStatus.COUNTERED, now());
+                finishCounter(sellerId, deal, listing, "Counter-offer: HK$" + price.toPlainString());
+                return deal;
+            });
         }
     }
 
@@ -248,16 +252,35 @@ public class DealService {
      * @return the countered deal
      */
     public Deal counterBorrow(String sellerId, String dealId, LocalDateTime start, LocalDateTime end) {
-        Access.requireSeller(store, sellerId);
         synchronized (store) {
+            Access.requireSeller(store, sellerId);
             Deal deal = requireDeal(dealId);
             Listing listing = requireCounterable(sellerId, deal, DealType.BORROW);
+            if (start != null && start.isBefore(now())) {
+                throw new ValidationException("The counter start time cannot be in the past");
+            }
             validatePeriod(start, end, listing);
-            deal.setCounterPeriod(start, end);
-            deal.setStatus(DealStatus.COUNTERED, now());
-            finishCounter(sellerId, deal, listing, "Counter-offer: borrow " + start.format(ListingService.DISPLAY_TIME)
-                    + " to " + end.format(ListingService.DISPLAY_TIME));
-            return deal;
+            return store.transact(() -> {
+                deal.setCounterPeriod(start, end);
+                deal.setStatus(DealStatus.COUNTERED, now());
+                finishCounter(sellerId, deal, listing, "Counter-offer: borrow " + start.format(ListingService.DISPLAY_TIME)
+                        + " to " + end.format(ListingService.DISPLAY_TIME));
+                return deal;
+            });
+        }
+    }
+
+    /** Returns a seller's requests, pending first, optionally scoped to one owned listing. */
+    public List<Deal> dealsForSeller(String sellerId, String listingId) {
+        synchronized (store) {
+            Access.requireSeller(store, sellerId);
+            return store.deals().stream()
+                    .filter(deal -> listingId == null || listingId.equals(deal.getListingId()))
+                    .filter(deal -> store.findListing(deal.getListingId())
+                            .filter(listing -> sellerId.equals(listing.getSellerId())).isPresent())
+                    .sorted(Comparator.comparing((Deal deal) -> deal.getStatus() != DealStatus.PENDING)
+                            .thenComparing(Deal::getSubmittedAt, Comparator.reverseOrder()))
+                    .toList();
         }
     }
 
@@ -530,7 +553,7 @@ public class DealService {
         return LocalDateTime.now(clock);
     }
 
-    private static BigDecimal parseOfferPrice(String text) {
+    static BigDecimal parseOfferPrice(String text) {
         if (text == null || text.isBlank()) {
             throw new ValidationException("Please enter a price");
         }
@@ -565,7 +588,7 @@ public class DealService {
                 errors.add("The borrowing period must be at least " + MIN_BORROW.getSeconds() + " seconds");
             }
             if (listing.getLendingDurationSeconds() > 0
-                    && length.getSeconds() > listing.getLendingDurationSeconds()) {
+                    && length.compareTo(Duration.ofSeconds(listing.getLendingDurationSeconds())) > 0) {
                 errors.add("The borrowing period is longer than the seller allows ("
                         + formatDuration(Duration.ofSeconds(listing.getLendingDurationSeconds())) + ")");
             }
@@ -646,11 +669,10 @@ public class DealService {
     }
 
     private void finishCounter(String sellerId, Deal deal, Listing listing, String text) {
-        ChatThread thread = chat.openThread(deal.getBuyerId(), listing.getId());
+        ChatThread thread = chat.getOrCreateThread(deal.getBuyerId(), listing);
         chat.postOfferCard(thread, sellerId, Role.SELLER, text, deal.getId());
         notifications.notify(deal.getBuyerId(), NotificationCategory.DEALS, "Counter-offer received",
                 "The seller of \"" + listing.getTitle() + "\" sent a counter-offer. " + text, deal.getId());
-        store.commit();
     }
 
     /** Gives the item to this deal's buyer and declines every other open request on the listing. */

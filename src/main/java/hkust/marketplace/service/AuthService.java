@@ -3,6 +3,7 @@ package hkust.marketplace.service;
 import hkust.marketplace.data.DataStore;
 import hkust.marketplace.model.Buyer;
 import hkust.marketplace.model.Role;
+import hkust.marketplace.model.Seller;
 import hkust.marketplace.model.User;
 import hkust.marketplace.util.CredentialValidator;
 import hkust.marketplace.util.Ids;
@@ -41,23 +42,7 @@ public class AuthService {
      */
     public Buyer registerBuyer(String username, String fullName, String password, String confirmPassword,
                                String residenceHall) {
-        List<String> errors = new ArrayList<>();
-        if (isBlank(username)) {
-            errors.add("Username is required");
-        } else if (!CredentialValidator.isValidUsername(username)) {
-            errors.add("Username can only contain letters, digits and underscores");
-        }
-        if (isBlank(fullName)) {
-            errors.add("Full name is required");
-        } else if (!CredentialValidator.isValidFullName(fullName)) {
-            errors.add("Full name must be at most " + CredentialValidator.MAX_FULL_NAME_LENGTH + " characters");
-        }
-        errors.addAll(CredentialValidator.passwordProblems(password));
-        if (confirmPassword == null || confirmPassword.isEmpty()) {
-            errors.add("Please confirm the password");
-        } else if (password != null && !password.equals(confirmPassword)) {
-            errors.add("Passwords do not match");
-        }
+        List<String> errors = registrationProblems(username, fullName, password, confirmPassword);
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
         }
@@ -101,6 +86,56 @@ public class AuthService {
             throw new MarketplaceException("This account is deactivated. Please contact the admin.");
         }
         return user;
+    }
+
+    /** Registers a seller with the same credentials policy and username namespace as buyers. */
+    public Seller registerSeller(String username, String fullName, String password, String confirmation,
+                                 String bio, List<String> locations) {
+        List<String> errors = registrationProblems(username, fullName, password, confirmation);
+        if (!MeetupLocations.valid(locations)) {
+            errors.add("Select meet-up locations from the HKUST list");
+        }
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
+        }
+        synchronized (store) {
+            if (store.findUserByUsername(username).isPresent()) {
+                throw new ValidationException("Username is already taken");
+            }
+            String salt = PasswordHasher.newSalt();
+            Seller seller = new Seller(Ids.next("U"), username.trim(), fullName.trim(),
+                    PasswordHasher.hash(password, salt), salt, LocalDateTime.now(clock),
+                    isBlank(bio) ? null : bio.trim());
+            if (locations != null) {
+                seller.getMeetupLocations().addAll(locations.stream().distinct().toList());
+            }
+            return store.transact(() -> {
+                store.putUser(seller);
+                return seller;
+            });
+        }
+    }
+
+    private static List<String> registrationProblems(String username, String fullName, String password,
+                                                     String confirmPassword) {
+        List<String> errors = new ArrayList<>();
+        if (isBlank(username)) {
+            errors.add("Username is required");
+        } else if (!CredentialValidator.isValidUsername(username)) {
+            errors.add("Username can only contain letters, digits and underscores");
+        }
+        if (isBlank(fullName)) {
+            errors.add("Full name is required");
+        } else if (!CredentialValidator.isValidFullName(fullName)) {
+            errors.add("Full name must be at most " + CredentialValidator.MAX_FULL_NAME_LENGTH + " characters");
+        }
+        errors.addAll(CredentialValidator.passwordProblems(password));
+        if (confirmPassword == null || confirmPassword.isEmpty()) {
+            errors.add("Please confirm the password");
+        } else if (password != null && !password.equals(confirmPassword)) {
+            errors.add("Passwords do not match");
+        }
+        return errors;
     }
 
     private static boolean isBlank(String s) {

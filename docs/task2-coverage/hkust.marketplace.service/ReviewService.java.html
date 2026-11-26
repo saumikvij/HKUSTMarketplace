@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReviewService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace (COMP3111 G48)</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">ReviewService.java</span></div><h1>ReviewService.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import hkust.marketplace.data.DataStore;
+import hkust.marketplace.model.Deal;
+import hkust.marketplace.model.Listing;
+import hkust.marketplace.model.NotificationCategory;
+import hkust.marketplace.model.Review;
+import hkust.marketplace.model.User;
+import hkust.marketplace.util.Ids;
+import hkust.marketplace.util.MarketplaceException;
+import hkust.marketplace.util.ValidationException;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.stream.Collectors;
+
+/** Rating and reviewing sellers after a finished deal (Task 1.10). */
+public class ReviewService {
+    /** Maximum review length. */
+    public static final int MAX_COMMENT_LENGTH = 500;
+
+    private final DataStore store;
+    private final Clock clock;
+    private final NotificationService notifications;
+
+    /**
+     * @param store data store
+     * @param clock clock
+     * @param notifications notification service
+     */
+<span class="fc" id="L34">    public ReviewService(DataStore store, Clock clock, NotificationService notifications) {</span>
+<span class="fc" id="L35">        this.store = store;</span>
+<span class="fc" id="L36">        this.clock = clock;</span>
+<span class="fc" id="L37">        this.notifications = notifications;</span>
+<span class="fc" id="L38">    }</span>
+
+    /**
+     * Submits a 1-5 star rating and written review for a finished deal.
+     * @param buyerId reviewer (must own the deal)
+     * @param dealId a Completed, Returned or Auto-returned deal
+     * @param rating 1 to 5
+     * @param comment written review, 1 to 500 characters
+     * @return the stored review
+     * @throws ValidationException if the rating or comment is invalid
+     * @throws MarketplaceException if the deal is not finished, already reviewed, or the seller was deleted
+     */
+    public Review submitReview(String buyerId, String dealId, int rating, String comment) {
+<span class="fc" id="L51">        Access.requireBuyer(store, buyerId);</span>
+<span class="fc" id="L52">        Deal deal = store.findDeal(dealId).filter(d -&gt; d.getBuyerId().equals(buyerId))</span>
+<span class="fc" id="L53">                .orElseThrow(() -&gt; new MarketplaceException(&quot;Deal not found.&quot;));</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">        if (!deal.getStatus().isFinished()) {</span>
+<span class="fc" id="L55">            throw new MarketplaceException(&quot;You can only review a seller after the deal is finished.&quot;);</span>
+        }
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        if (reviewForDeal(dealId).isPresent()) {</span>
+<span class="fc" id="L58">            throw new MarketplaceException(&quot;You have already reviewed this deal.&quot;);</span>
+        }
+<span class="fc" id="L60">        Listing listing = store.findListing(deal.getListingId())</span>
+<span class="fc" id="L61">                .orElseThrow(() -&gt; new MarketplaceException(&quot;Listing not found.&quot;));</span>
+<span class="fc" id="L62">        User seller = store.findUser(listing.getSellerId()).orElse(null);</span>
+<span class="pc bpc" id="L63" title="1 of 4 branches missed.">        if (seller == null || seller.getStatus() == hkust.marketplace.model.AccountStatus.DELETED) {</span>
+<span class="fc" id="L64">            throw new MarketplaceException(&quot;This seller can no longer be rated.&quot;);</span>
+        }
+<span class="fc bfc" id="L66" title="All 4 branches covered.">        if (rating &lt; 1 || rating &gt; 5) {</span>
+<span class="fc" id="L67">            throw new ValidationException(&quot;Please choose a rating from 1 to 5 stars&quot;);</span>
+        }
+<span class="fc bfc" id="L69" title="All 4 branches covered.">        if (comment == null || comment.isBlank()) {</span>
+<span class="fc" id="L70">            throw new ValidationException(&quot;Please write a review&quot;);</span>
+        }
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        if (comment.trim().length() &gt; MAX_COMMENT_LENGTH) {</span>
+<span class="fc" id="L73">            throw new ValidationException(&quot;Review must be at most &quot; + MAX_COMMENT_LENGTH + &quot; characters&quot;);</span>
+        }
+<span class="fc" id="L75">        Review review = new Review(Ids.next(&quot;V&quot;), dealId, buyerId, seller.getId(), rating, comment.trim(),</span>
+<span class="fc" id="L76">                LocalDateTime.now(clock));</span>
+<span class="fc" id="L77">        store.putReview(review);</span>
+<span class="fc" id="L78">        notifications.notify(seller.getId(), NotificationCategory.REVIEWS, &quot;New review&quot;,</span>
+<span class="fc" id="L79">                &quot;You received &quot; + rating + &quot; star(s) for \&quot;&quot; + listing.getTitle() + &quot;\&quot;.&quot;, review.getId());</span>
+<span class="fc" id="L80">        store.commit();</span>
+<span class="fc" id="L81">        return review;</span>
+    }
+
+    /**
+     * @param dealId deal
+     * @return the review of that deal, if any
+     */
+    public Optional&lt;Review&gt; reviewForDeal(String dealId) {
+<span class="fc" id="L89">        return store.reviews().stream().filter(r -&gt; r.getDealId().equals(dealId)).findFirst();</span>
+    }
+
+    /**
+     * @param buyerId reviewer
+     * @return every review the buyer submitted, newest first (My Reviews)
+     */
+    public List&lt;Review&gt; reviewsByBuyer(String buyerId) {
+<span class="fc" id="L97">        return store.reviews().stream().filter(r -&gt; r.getBuyerId().equals(buyerId))</span>
+<span class="fc" id="L98">                .sorted(Comparator.comparing(Review::getPostedAt).reversed()).collect(Collectors.toList());</span>
+    }
+
+    /** Posts the one permitted seller reply to a visible review and notifies its buyer. */
+    public void reply(String sellerId, String reviewId, String reply) {
+<span class="pc bpc" id="L103" title="1 of 4 branches missed.">        if (reply == null || reply.isBlank()) throw new ValidationException(&quot;A reply cannot be empty&quot;);</span>
+<span class="fc" id="L104">        synchronized (store) {</span>
+<span class="fc" id="L105">            Review review = requireVisibleOwned(sellerId, reviewId);</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">            if (review.getSellerReply() != null) throw new MarketplaceException(&quot;This review already has a reply.&quot;);</span>
+<span class="fc" id="L107">            store.transact(() -&gt; {</span>
+<span class="fc" id="L108">                review.setSellerReply(reply.trim());</span>
+<span class="fc" id="L109">                notifications.notify(review.getBuyerId(), NotificationCategory.REVIEWS, &quot;Seller replied&quot;,</span>
+<span class="fc" id="L110">                        reply.trim(), review.getId());</span>
+<span class="fc" id="L111">                return null;</span>
+            });
+<span class="fc" id="L113">        }</span>
+<span class="fc" id="L114">    }</span>
+
+    /** Flags a visible review for the admin while leaving it visible to buyers. */
+    public void flag(String sellerId, String reviewId) {
+<span class="fc" id="L118">        synchronized (store) {</span>
+<span class="fc" id="L119">            Review review = requireVisibleOwned(sellerId, reviewId);</span>
+<span class="pc bpc" id="L120" title="1 of 2 branches missed.">            if (review.isFlagged()) throw new MarketplaceException(&quot;This review is already waiting for the admin.&quot;);</span>
+<span class="fc" id="L121">            store.transact(() -&gt; {</span>
+<span class="fc" id="L122">                review.setFlagged(true);</span>
+<span class="fc" id="L123">                notifications.notifyAdmins(NotificationCategory.MODERATION, &quot;Review flagged&quot;,</span>
+                        &quot;A seller flagged a review for moderation.&quot;, reviewId);
+<span class="fc" id="L125">                return null;</span>
+            });
+<span class="fc" id="L127">        }</span>
+<span class="fc" id="L128">    }</span>
+
+    /** Retrieves a visible review belonging to the active seller. */
+    public Review requireVisibleOwned(String sellerId, String reviewId) {
+<span class="fc" id="L132">        Access.requireSeller(store, sellerId);</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">        return store.reviews().stream().filter(review -&gt; review.getId().equals(reviewId)</span>
+<span class="fc bfc" id="L134" title="All 4 branches covered.">                        &amp;&amp; review.getSellerId().equals(sellerId) &amp;&amp; !review.isHidden()).findFirst()</span>
+<span class="fc" id="L135">                .orElseThrow(() -&gt; new MarketplaceException(&quot;This review is unavailable.&quot;));</span>
+    }
+
+    /**
+     * @param sellerId seller
+     * @return the seller's reviews that are not hidden, newest first (shown to all users)
+     */
+    public List&lt;Review&gt; visibleReviewsForSeller(String sellerId) {
+<span class="fc bfc" id="L143" title="All 4 branches covered.">        return store.reviews().stream().filter(r -&gt; r.getSellerId().equals(sellerId) &amp;&amp; !r.isHidden())</span>
+<span class="fc" id="L144">                .sorted(Comparator.comparing(Review::getPostedAt).reversed()).collect(Collectors.toList());</span>
+    }
+
+    /**
+     * @param sellerId seller
+     * @return average of visible ratings rounded to one decimal place, or empty if there are none
+     */
+    public OptionalDouble averageRating(String sellerId) {
+<span class="fc" id="L152">        OptionalDouble avg = visibleReviewsForSeller(sellerId).stream().mapToInt(Review::getRating).average();</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">        return avg.isPresent() ? OptionalDouble.of(Math.round(avg.getAsDouble() * 10) / 10.0) : avg;</span>
+    }
+
+    /**
+     * @param sellerId seller
+     * @return text such as &quot;4.5 ★ (2 reviews)&quot; or &quot;No ratings yet&quot;
+     */
+    public String ratingSummary(String sellerId) {
+<span class="fc" id="L161">        OptionalDouble avg = averageRating(sellerId);</span>
+<span class="fc bfc" id="L162" title="All 2 branches covered.">        if (avg.isEmpty()) {</span>
+<span class="fc" id="L163">            return &quot;No ratings yet&quot;;</span>
+        }
+<span class="fc" id="L165">        int count = visibleReviewsForSeller(sellerId).size();</span>
+<span class="fc bfc" id="L166" title="All 2 branches covered.">        return String.format(&quot;%.1f ★ (%d review%s)&quot;, avg.getAsDouble(), count, count == 1 ? &quot;&quot; : &quot;s&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

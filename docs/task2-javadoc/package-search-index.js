@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"hkust.marketplace"},{"l":"hkust.marketplace.data"},{"l":"hkust.marketplace.model"},{"l":"hkust.marketplace.service"},{"l":"hkust.marketplace.ui"},{"l":"hkust.marketplace.util"}];updateSearchResults();

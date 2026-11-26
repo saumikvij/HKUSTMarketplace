@@ -32,7 +32,7 @@ public class WelcomeView {
         buyerRow.setAlignment(Pos.CENTER);
 
         Button seller = new Button("Seller portal");
-        seller.setOnAction(e -> Ui.info("Seller portal", "The Seller Portal is Task 2 of the team project."));
+        seller.setOnAction(e -> app.showSellerLogin());
         Button admin = new Button("Admin portal");
         admin.setOnAction(e -> Ui.info("Admin portal", "The Admin Portal is Task 3 of the team project."));
         HBox otherRow = new HBox(10, seller, admin);

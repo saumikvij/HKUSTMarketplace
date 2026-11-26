@@ -2,6 +2,7 @@ package hkust.marketplace.service;
 
 import hkust.marketplace.data.DataStore;
 import hkust.marketplace.model.Buyer;
+import hkust.marketplace.model.Seller;
 import hkust.marketplace.model.User;
 import hkust.marketplace.util.CredentialValidator;
 import hkust.marketplace.util.MarketplaceException;
@@ -49,6 +50,54 @@ public class ProfileService {
         return buyer;
     }
 
+    /** Snapshot of the editable seller profile fields for stale form detection. */
+    public record SellerDetails(String fullName, String bio, List<String> locations) {
+        public SellerDetails {
+            locations = List.copyOf(locations);
+        }
+    }
+
+    /** Reads the current profile of an active seller. */
+    public SellerDetails sellerDetails(String sellerId) {
+        synchronized (store) {
+            return detailsOf(Access.requireSeller(store, sellerId));
+        }
+    }
+
+    /** Saves seller details if the profile still matches the displayed snapshot. */
+    public SellerDetails updateSeller(String sellerId, SellerDetails expected, String fullName,
+                                      String bio, List<String> locations) {
+        List<String> errors = new ArrayList<>();
+        if (fullName == null || fullName.isBlank() || !CredentialValidator.isValidFullName(fullName)) {
+            errors.add("Full name is required and must be at most 50 characters");
+        }
+        if (!MeetupLocations.valid(locations)) {
+            errors.add("Select meet-up locations from the HKUST list");
+        }
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
+        }
+        synchronized (store) {
+            Seller seller = Access.requireSeller(store, sellerId);
+            if (!detailsOf(seller).equals(expected)) {
+                throw new MarketplaceException("Your profile changed while you were editing. Reload it and try again.");
+            }
+            return store.transact(() -> {
+                seller.setFullName(fullName.trim());
+                seller.setBio(bio == null || bio.isBlank() ? null : bio.trim());
+                seller.getMeetupLocations().clear();
+                if (locations != null) {
+                    seller.getMeetupLocations().addAll(locations.stream().distinct().toList());
+                }
+                return detailsOf(seller);
+            });
+        }
+    }
+
+    private static SellerDetails detailsOf(Seller seller) {
+        return new SellerDetails(seller.getFullName(), seller.getBio(), seller.getMeetupLocations());
+    }
+
     /**
      * Changes a user's password after checking the current one.
      * @param userId user
@@ -58,7 +107,15 @@ public class ProfileService {
      * @throws ValidationException if the current password is wrong or the new one breaks a rule
      */
     public void changePassword(String userId, String currentPassword, String newPassword, String confirmPassword) {
-        User user = store.findUser(userId).orElseThrow(() -> new MarketplaceException("Account not found."));
+        synchronized (store) {
+            changeCurrentPassword(userId, currentPassword, newPassword, confirmPassword);
+        }
+    }
+
+    private void changeCurrentPassword(String userId, String currentPassword, String newPassword,
+                                       String confirmPassword) {
+        User user = store.findUser(userId).filter(User::isActive)
+                .orElseThrow(() -> new MarketplaceException("Active account not found."));
         if (!PasswordHasher.matches(currentPassword == null ? "" : currentPassword, user.getSalt(),
                 user.getPasswordHash())) {
             throw new ValidationException("Current password is incorrect");
@@ -74,7 +131,10 @@ public class ProfileService {
             throw new ValidationException(errors);
         }
         String salt = PasswordHasher.newSalt();
-        user.setPassword(PasswordHasher.hash(newPassword, salt), salt);
-        store.commit();
+        String hash = PasswordHasher.hash(newPassword, salt);
+        store.transact(() -> {
+            user.setPassword(hash, salt);
+            return null;
+        });
     }
 }

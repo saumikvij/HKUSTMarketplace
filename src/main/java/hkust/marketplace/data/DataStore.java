@@ -7,7 +7,11 @@ import hkust.marketplace.model.Notification;
 import hkust.marketplace.model.Report;
 import hkust.marketplace.model.Review;
 import hkust.marketplace.model.User;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.function.Supplier;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -95,6 +99,52 @@ public class DataStore implements Serializable {
         } catch (IOException e) {
             throw new java.io.UncheckedIOException("Could not save data: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Saves a group of changes together. A failed save restores the previous in-memory records.
+     * The callback must not call commit itself.
+     */
+    public synchronized <T> T transact(Supplier<T> change) {
+        if (file == null) {
+            return change.get();
+        }
+        DataStore before = snapshot();
+        try {
+            T result = change.get();
+            commit();
+            return result;
+        } catch (UncheckedIOException exception) {
+            restore(users, before.users);
+            restore(listings, before.listings);
+            restore(deals, before.deals);
+            restore(reviews, before.reviews);
+            restore(threads, before.threads);
+            restore(notifications, before.notifications);
+            restore(reports, before.reports);
+            throw exception;
+        }
+    }
+
+    private DataStore snapshot() {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try {
+            try (ObjectOutputStream out = new ObjectOutputStream(bytes)) {
+                out.writeObject(this);
+            }
+            try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+                return (DataStore) in.readObject();
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not prepare the data update.", e);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("Could not prepare the data update.", e);
+        }
+    }
+
+    private static <T> void restore(Map<String, T> target, Map<String, T> previous) {
+        target.clear();
+        target.putAll(previous);
     }
 
     /** @return the bound data file, or null for an in-memory store */

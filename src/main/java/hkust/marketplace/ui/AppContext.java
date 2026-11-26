@@ -15,6 +15,7 @@ public class AppContext {
     private final Stage stage;
     private User currentUser;
     private BuyerPortal portal;
+    private SellerPortal sellerPortal;
 
     /**
      * @param marketplace services
@@ -37,8 +38,10 @@ public class AppContext {
 
     /** Shows the welcome screen and logs out. */
     public void showWelcome() {
+        ChatWindow.closeAll();
         currentUser = null;
         portal = null;
+        sellerPortal = null;
         setRoot(new WelcomeView(this).build());
     }
 
@@ -62,12 +65,30 @@ public class AppContext {
         setRoot(portal.build());
     }
 
+    /** Opens the role-checked seller login form. */
+    public void showSellerLogin() {
+        setRoot(new BuyerLoginView(this, hkust.marketplace.model.Role.SELLER).build());
+    }
+
+    /** Opens seller registration. */
+    public void showSellerRegister() {
+        setRoot(new SellerRegistrationView(this).build());
+    }
+
+    /** Opens the seller dashboard after login. */
+    public void enterSellerPortal(User seller) {
+        currentUser = seller;
+        sellerPortal = new SellerPortal(this);
+        setRoot(sellerPortal.build());
+    }
+
     /** Called every second: runs auto-return and reminders, then refreshes the open screen if needed. */
     public void tick() {
         int changed = marketplace.deals().processDueDates();
         if (portal != null) {
             portal.tick(changed > 0);
         }
+        if (sellerPortal != null) sellerPortal.tick(changed > 0);
     }
 
     private void setRoot(Parent root) {

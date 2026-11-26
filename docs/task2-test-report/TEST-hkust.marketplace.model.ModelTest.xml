@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="hkust.marketplace.model.ModelTest" time="0.03" tests="8" errors="0" skipped="0" failures="0">
+  <testcase name="chatAndNotificationBasics" classname="hkust.marketplace.model.ModelTest" time="0.004" />
+  <testcase name="dealTypesMatchListingTypes" classname="hkust.marketplace.model.ModelTest" time="0.003" />
+  <testcase name="dealCurrentPriceAndTimestamps" classname="hkust.marketplace.model.ModelTest" time="0.005" />
+  <testcase name="labelsAreReadable" classname="hkust.marketplace.model.ModelTest" time="0.004" />
+  <testcase name="listingPhotosAndCounters" classname="hkust.marketplace.model.ModelTest" time="0.001" />
+  <testcase name="dealStatusGroups" classname="hkust.marketplace.model.ModelTest" time="0.001" />
+  <testcase name="browsableStatuses" classname="hkust.marketplace.model.ModelTest" time="0.001" />
+  <testcase name="usersKnowTheirRole" classname="hkust.marketplace.model.ModelTest" time="0.004" />
+</testsuite>

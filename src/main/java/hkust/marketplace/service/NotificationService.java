@@ -87,13 +87,19 @@ public class NotificationService {
      * @throws MarketplaceException if it does not exist or belongs to someone else
      */
     public Notification markRead(String userId, String notificationId) {
-        Notification n = store.notifications().stream()
-                .filter(x -> x.getId().equals(notificationId) && x.getUserId().equals(userId))
-                .findFirst()
-                .orElseThrow(() -> new MarketplaceException("Notification not found."));
-        n.setRead(true);
-        store.commit();
-        return n;
+        synchronized (store) {
+            Notification n = store.notifications().stream()
+                    .filter(x -> x.getId().equals(notificationId) && x.getUserId().equals(userId))
+                    .findFirst()
+                    .orElseThrow(() -> new MarketplaceException("Notification not found."));
+            if (!n.isRead()) {
+                store.transact(() -> {
+                    n.setRead(true);
+                    return null;
+                });
+            }
+            return n;
+        }
     }
 
     /**
@@ -102,14 +108,13 @@ public class NotificationService {
      * @return how many were changed
      */
     public int markAllRead(String userId) {
-        int changed = 0;
-        for (Notification n : store.notifications()) {
-            if (n.getUserId().equals(userId) && !n.isRead()) {
-                n.setRead(true);
-                changed++;
-            }
+        synchronized (store) {
+            List<Notification> unread = forUser(userId, null, true);
+            if (unread.isEmpty()) return 0;
+            return store.transact(() -> {
+                unread.forEach(notification -> notification.setRead(true));
+                return unread.size();
+            });
         }
-        store.commit();
-        return changed;
     }
 }

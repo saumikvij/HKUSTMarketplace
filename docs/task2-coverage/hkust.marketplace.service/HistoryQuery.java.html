@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HistoryQuery.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace (COMP3111 G48)</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">HistoryQuery.java</span></div><h1>HistoryQuery.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import hkust.marketplace.model.Category;
+import hkust.marketplace.model.DealType;
+import java.time.LocalDate;
+
+/** Search and filter settings for Deal History (Task 1.9). Unset fields are ignored. */
+<span class="fc" id="L8">public class HistoryQuery {</span>
+    private String keyword;
+    private LocalDate from;
+    private LocalDate to;
+    private Category category;
+    private DealType dealType;
+
+    /** @return keyword matched against item title and seller name */
+<span class="fc" id="L16">    public String getKeyword() { return keyword; }</span>
+    /** @param keyword keyword or null
+     *  @return this query */
+<span class="fc" id="L19">    public HistoryQuery keyword(String keyword) { this.keyword = keyword; return this; }</span>
+    /** @return first deal date included */
+<span class="fc" id="L21">    public LocalDate getFrom() { return from; }</span>
+    /** @param from first date or null
+     *  @return this query */
+<span class="fc" id="L24">    public HistoryQuery from(LocalDate from) { this.from = from; return this; }</span>
+    /** @return last deal date included */
+<span class="fc" id="L26">    public LocalDate getTo() { return to; }</span>
+    /** @param to last date or null
+     *  @return this query */
+<span class="fc" id="L29">    public HistoryQuery to(LocalDate to) { this.to = to; return this; }</span>
+    /** @return category filter */
+<span class="fc" id="L31">    public Category getCategory() { return category; }</span>
+    /** @param category category or null
+     *  @return this query */
+<span class="fc" id="L34">    public HistoryQuery category(Category category) { this.category = category; return this; }</span>
+    /** @return deal type filter */
+<span class="fc" id="L36">    public DealType getDealType() { return dealType; }</span>
+    /** @param dealType deal type or null
+     *  @return this query */
+<span class="fc" id="L39">    public HistoryQuery dealType(DealType dealType) { this.dealType = dealType; return this; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

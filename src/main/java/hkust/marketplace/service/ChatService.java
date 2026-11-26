@@ -74,11 +74,22 @@ public class ChatService {
             if (existing.isPresent()) {
                 return existing.get();
             }
-            ChatThread thread = new ChatThread(Ids.next("C"), buyerId, listing.getSellerId(), listingId);
-            store.putThread(thread);
-            store.commit();
-            return thread;
+            return store.transact(() -> getOrCreateThread(buyerId, listing));
         }
+    }
+
+    ChatThread getOrCreateThread(String buyerId, Listing listing) {
+        return findThread(buyerId, listing.getId()).orElseGet(() -> {
+            ChatThread thread = new ChatThread(Ids.next("C"), buyerId, listing.getSellerId(), listing.getId());
+            store.putThread(thread);
+            return thread;
+        });
+    }
+
+    /** Returns an existing chat only to its signed-in participant. */
+    public ChatThread requireThread(String userId, String threadId) {
+        return store.findThread(threadId).filter(thread -> thread.hasParticipant(userId))
+                .orElseThrow(() -> new MarketplaceException("This chat is unavailable."));
     }
 
     /**
@@ -128,32 +139,33 @@ public class ChatService {
      * @throws MarketplaceException if the sender is not in the thread or the thread is read-only
      */
     public ChatMessage send(String threadId, String senderId, String text) {
-        ChatThread thread = store.findThread(threadId)
-                .orElseThrow(() -> new MarketplaceException("Chat not found."));
-        if (!thread.hasParticipant(senderId)) {
-            throw new MarketplaceException("You are not part of this chat.");
-        }
-        Optional<String> readOnly = readOnlyReason(thread);
-        if (readOnly.isPresent()) {
-            throw new MarketplaceException(readOnly.get());
-        }
-        if (text == null || text.isBlank()) {
-            throw new ValidationException("Message cannot be empty");
-        }
-        if (text.length() > MAX_MESSAGE_LENGTH) {
-            throw new ValidationException("Message must be at most " + MAX_MESSAGE_LENGTH + " characters");
-        }
-        Role role = thread.getBuyerId().equals(senderId) ? Role.BUYER : Role.SELLER;
-        ChatMessage message = new ChatMessage(senderId, role, text, LocalDateTime.now(clock), null);
         synchronized (store) {
-            thread.getMessages().add(message);
+            ChatThread thread = store.findThread(threadId)
+                    .orElseThrow(() -> new MarketplaceException("Chat not found."));
+            if (!thread.hasParticipant(senderId)) {
+                throw new MarketplaceException("You are not part of this chat.");
+            }
+            Optional<String> readOnly = readOnlyReason(thread);
+            if (readOnly.isPresent()) {
+                throw new MarketplaceException(readOnly.get());
+            }
+            if (text == null || text.isBlank()) {
+                throw new ValidationException("Message cannot be empty");
+            }
+            if (text.length() > MAX_MESSAGE_LENGTH) {
+                throw new ValidationException("Message must be at most " + MAX_MESSAGE_LENGTH + " characters");
+            }
+            Role role = thread.getBuyerId().equals(senderId) ? Role.BUYER : Role.SELLER;
+            ChatMessage message = new ChatMessage(senderId, role, text, LocalDateTime.now(clock), null);
+            String recipient = role == Role.BUYER ? thread.getSellerId() : thread.getBuyerId();
+            String sender = store.findUser(senderId).map(User::getFullName).orElse("Someone");
+            return store.transact(() -> {
+                thread.getMessages().add(message);
+                notifications.notify(recipient, NotificationCategory.MESSAGES, "New message from " + sender,
+                        preview(text), thread.getId());
+                return message;
+            });
         }
-        String recipient = role == Role.BUYER ? thread.getSellerId() : thread.getBuyerId();
-        String sender = store.findUser(senderId).map(User::getFullName).orElse("Someone");
-        notifications.notify(recipient, NotificationCategory.MESSAGES, "New message from " + sender,
-                preview(text), thread.getId());
-        store.commit();
-        return message;
     }
 
     /**

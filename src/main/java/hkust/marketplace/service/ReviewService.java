@@ -98,6 +98,43 @@ public class ReviewService {
                 .sorted(Comparator.comparing(Review::getPostedAt).reversed()).collect(Collectors.toList());
     }
 
+    /** Posts the one permitted seller reply to a visible review and notifies its buyer. */
+    public void reply(String sellerId, String reviewId, String reply) {
+        if (reply == null || reply.isBlank()) throw new ValidationException("A reply cannot be empty");
+        synchronized (store) {
+            Review review = requireVisibleOwned(sellerId, reviewId);
+            if (review.getSellerReply() != null) throw new MarketplaceException("This review already has a reply.");
+            store.transact(() -> {
+                review.setSellerReply(reply.trim());
+                notifications.notify(review.getBuyerId(), NotificationCategory.REVIEWS, "Seller replied",
+                        reply.trim(), review.getId());
+                return null;
+            });
+        }
+    }
+
+    /** Flags a visible review for the admin while leaving it visible to buyers. */
+    public void flag(String sellerId, String reviewId) {
+        synchronized (store) {
+            Review review = requireVisibleOwned(sellerId, reviewId);
+            if (review.isFlagged()) throw new MarketplaceException("This review is already waiting for the admin.");
+            store.transact(() -> {
+                review.setFlagged(true);
+                notifications.notifyAdmins(NotificationCategory.MODERATION, "Review flagged",
+                        "A seller flagged a review for moderation.", reviewId);
+                return null;
+            });
+        }
+    }
+
+    /** Retrieves a visible review belonging to the active seller. */
+    public Review requireVisibleOwned(String sellerId, String reviewId) {
+        Access.requireSeller(store, sellerId);
+        return store.reviews().stream().filter(review -> review.getId().equals(reviewId)
+                        && review.getSellerId().equals(sellerId) && !review.isHidden()).findFirst()
+                .orElseThrow(() -> new MarketplaceException("This review is unavailable."));
+    }
+
     /**
      * @param sellerId seller
      * @return the seller's reviews that are not hidden, newest first (shown to all users)

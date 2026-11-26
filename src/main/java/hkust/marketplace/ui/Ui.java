@@ -160,6 +160,10 @@ public final class Ui {
             return null;
         }
         try {
+            if (path.startsWith("photo:")) {
+                byte[] bytes = java.util.Base64.getDecoder().decode(path.substring(6));
+                return new Image(new java.io.ByteArrayInputStream(bytes), 1200, 1200, true, true);
+            }
             if (path.startsWith("res:")) {
                 InputStream in = Ui.class.getResourceAsStream(path.substring(4));
                 return in == null ? null : new Image(in);

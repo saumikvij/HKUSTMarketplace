@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SellerListingService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace (COMP3111 G48)</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">SellerListingService.java</span></div><h1>SellerListingService.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import hkust.marketplace.data.DataStore;
+import hkust.marketplace.model.*;
+import hkust.marketplace.util.Ids;
+import hkust.marketplace.util.MarketplaceException;
+import hkust.marketplace.util.ValidationException;
+
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+
+/** Seller-owned listing submission and management (Tasks 2.3 and 2.4). */
+public final class SellerListingService {
+    private final DataStore store;
+    private final Clock clock;
+    private final NotificationService notifications;
+
+    /** Form values. The photo order is also the buyer gallery order. */
+    public record Details(ListingType type, String title, Category category, Condition condition,
+                          String description, String location, String price, String duration, List&lt;String&gt; photos) {
+<span class="fc" id="L26">        public Details {</span>
+<span class="fc" id="L27">            photos = List.copyOf(photos);</span>
+<span class="fc" id="L28">        }</span>
+
+        /** Copies the current persisted listing values for display or editing. */
+        public static Details of(Listing listing) {
+<span class="fc" id="L32">            return new Details(listing.getType(), listing.getTitle(), listing.getCategory(), listing.getCondition(),</span>
+<span class="fc" id="L33">                    listing.getDescription(), listing.getMeetupLocation(),</span>
+<span class="pc bpc" id="L34" title="1 of 2 branches missed.">                    listing.getPrice() == null ? &quot;&quot; : listing.getPrice().toPlainString(),</span>
+<span class="pc bpc" id="L35" title="1 of 2 branches missed.">                    listing.getType() == ListingType.LEND ? Long.toString(listing.getLendingDurationSeconds()) : &quot;&quot;,</span>
+<span class="fc" id="L36">                    listing.getPhotos());</span>
+        }
+    }
+
+    /** Listing data that must still match when an edit or removal is confirmed. */
+<span class="fc" id="L41">    public record Revision(Details details, ListingStatus status, LocalDateTime reviewedAt, String reason) {</span>
+        /** Captures the revision shown to the seller. */
+        public static Revision of(Listing listing) {
+<span class="fc" id="L44">            return new Revision(Details.of(listing), listing.getStatus(), listing.getReviewedAt(),</span>
+<span class="fc" id="L45">                    listing.getRejectionReason());</span>
+        }
+    }
+
+<span class="fc" id="L49">    SellerListingService(DataStore store, Clock clock, NotificationService notifications) {</span>
+<span class="fc" id="L50">        this.store = store;</span>
+<span class="fc" id="L51">        this.clock = clock;</span>
+<span class="fc" id="L52">        this.notifications = notifications;</span>
+<span class="fc" id="L53">    }</span>
+
+    /** Returns the active seller's own listings, including removed records. */
+    public List&lt;Listing&gt; forSeller(String sellerId) {
+<span class="fc" id="L57">        Access.requireSeller(store, sellerId);</span>
+<span class="fc" id="L58">        return store.listings().stream().filter(listing -&gt; listing.getSellerId().equals(sellerId))</span>
+<span class="fc" id="L59">                .sorted(Comparator.comparing(Listing::getPostedAt).reversed()).toList();</span>
+    }
+
+    /** Retrieves one listing after checking seller ownership. */
+    public Listing requireOwned(String sellerId, String listingId) {
+<span class="fc" id="L64">        Access.requireSeller(store, sellerId);</span>
+<span class="fc" id="L65">        return store.findListing(listingId).filter(listing -&gt; listing.getSellerId().equals(sellerId))</span>
+<span class="fc" id="L66">                .orElseThrow(() -&gt; new MarketplaceException(&quot;This listing is unavailable.&quot;));</span>
+    }
+
+    /** Allocates a stable key to reuse if the same creation form is submitted again. */
+    public String newSubmissionId() {
+<span class="fc" id="L71">        return Ids.next(&quot;L&quot;);</span>
+    }
+
+    /** Submits a listing once per form key and alerts the admin. */
+    public Listing create(String sellerId, String submissionId, Details details) {
+<span class="fc" id="L76">        Objects.requireNonNull(submissionId);</span>
+<span class="fc" id="L77">        synchronized (store) {</span>
+<span class="fc" id="L78">            Access.requireSeller(store, sellerId);</span>
+<span class="fc" id="L79">            Listing existing = store.findListing(submissionId).orElse(null);</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">            if (existing != null) {</span>
+<span class="fc" id="L81">                return requireOwned(sellerId, submissionId);</span>
+            }
+<span class="fc" id="L83">            Terms terms = validate(details);</span>
+<span class="fc" id="L84">            Listing listing = new Listing(submissionId, sellerId, details.type(), details.title().trim(),</span>
+<span class="fc" id="L85">                    details.category(), details.condition(), details.description().trim(), details.location(),</span>
+<span class="fc" id="L86">                    LocalDateTime.now(clock));</span>
+<span class="fc" id="L87">            applyDetails(listing, details, terms);</span>
+<span class="fc" id="L88">            return store.transact(() -&gt; {</span>
+<span class="fc" id="L89">                store.putListing(listing);</span>
+<span class="fc" id="L90">                notifyAdmin(listing, &quot;Listing submitted&quot;);</span>
+<span class="fc" id="L91">                return listing;</span>
+            });
+        }
+    }
+
+    /** Resubmits a valid, eligible edit for admin approval. */
+    public Listing edit(String sellerId, String listingId, Revision expected, Details details) {
+<span class="fc" id="L98">        synchronized (store) {</span>
+<span class="fc" id="L99">            Listing listing = requireUnchanged(sellerId, listingId, expected);</span>
+<span class="fc" id="L100">            Terms terms = validate(details);</span>
+<span class="fc" id="L101">            return store.transact(() -&gt; {</span>
+<span class="fc" id="L102">                applyDetails(listing, details, terms);</span>
+<span class="fc" id="L103">                listing.setStatus(ListingStatus.PENDING_REVIEW);</span>
+<span class="fc" id="L104">                listing.setReviewedAt(null);</span>
+<span class="fc" id="L105">                listing.setRejectionReason(null);</span>
+<span class="fc" id="L106">                notifyAdmin(listing, &quot;Listing resubmitted&quot;);</span>
+<span class="fc" id="L107">                return listing;</span>
+            });
+        }
+    }
+
+    /** Soft-removes an eligible listing and preserves its chats and deal history. */
+    public void remove(String sellerId, String listingId, Revision expected) {
+<span class="fc" id="L114">        synchronized (store) {</span>
+<span class="fc" id="L115">            Listing listing = requireUnchanged(sellerId, listingId, expected);</span>
+<span class="fc" id="L116">            store.transact(() -&gt; {</span>
+<span class="fc" id="L117">                listing.setStatus(ListingStatus.REMOVED);</span>
+<span class="fc" id="L118">                listing.setRemovalReason(&quot;Removed by seller&quot;);</span>
+<span class="fc" id="L119">                return null;</span>
+            });
+<span class="fc" id="L121">        }</span>
+<span class="fc" id="L122">    }</span>
+
+    /** Checks whether the seller can currently edit or remove their listing. */
+    public void checkEditable(String sellerId, String listingId) {
+<span class="nc" id="L126">        synchronized (store) {</span>
+<span class="nc" id="L127">            checkEditable(requireOwned(sellerId, listingId));</span>
+<span class="nc" id="L128">        }</span>
+<span class="nc" id="L129">    }</span>
+
+    private Listing requireUnchanged(String sellerId, String listingId, Revision expected) {
+<span class="fc" id="L132">        Listing listing = requireOwned(sellerId, listingId);</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">        if (!Revision.of(listing).equals(expected)) {</span>
+<span class="fc" id="L134">            throw new MarketplaceException(&quot;The listing changed. Refresh its details and try again.&quot;);</span>
+        }
+<span class="fc" id="L136">        checkEditable(listing);</span>
+<span class="fc" id="L137">        return listing;</span>
+    }
+
+    private void checkEditable(Listing listing) {
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">        switch (listing.getStatus()) {</span>
+<span class="fc" id="L142">            case PENDING_REVIEW, LIVE, REJECTED -&gt; { }</span>
+<span class="nc" id="L143">            default -&gt; throw new MarketplaceException(&quot;A listing with status &quot; + listing.getStatus()</span>
+                    + &quot; cannot be edited or removed.&quot;);
+        }
+<span class="fc bfc" id="L146" title="All 4 branches covered.">        if (store.deals().stream().anyMatch(deal -&gt; deal.getListingId().equals(listing.getId())</span>
+<span class="fc bfc" id="L147" title="All 2 branches covered.">                &amp;&amp; deal.getStatus().isOpenRequest())) {</span>
+<span class="fc" id="L148">            throw new MarketplaceException(&quot;Resolve the open offers or requests before changing this listing.&quot;);</span>
+        }
+<span class="fc" id="L150">    }</span>
+
+<span class="fc" id="L152">    private record Terms(BigDecimal price, long seconds) { }</span>
+
+    private static Terms validate(Details details) {
+<span class="fc" id="L155">        List&lt;String&gt; errors = new ArrayList&lt;&gt;();</span>
+<span class="pc bpc" id="L156" title="1 of 2 branches missed.">        if (details.type() == null) errors.add(&quot;Listing type is required&quot;);</span>
+<span class="pc bpc" id="L157" title="1 of 4 branches missed.">        if (details.title() == null || details.title().isBlank()) errors.add(&quot;Item name is required&quot;);</span>
+<span class="pc bpc" id="L158" title="1 of 2 branches missed.">        if (details.category() == null) errors.add(&quot;Category is required&quot;);</span>
+<span class="pc bpc" id="L159" title="1 of 2 branches missed.">        if (details.condition() == null) errors.add(&quot;Condition is required&quot;);</span>
+<span class="pc bpc" id="L160" title="2 of 4 branches missed.">        if (details.description() == null || details.description().isBlank()) errors.add(&quot;Description is required&quot;);</span>
+<span class="pc bpc" id="L161" title="1 of 2 branches missed.">        if (!MeetupLocations.contains(details.location())) errors.add(&quot;Select a valid HKUST meet-up location&quot;);</span>
+<span class="pc bpc" id="L162" title="1 of 2 branches missed.">        if (details.photos().size() &gt; Listing.MAX_PHOTOS) errors.add(&quot;Select at most 6 photos&quot;);</span>
+<span class="pc bpc" id="L163" title="1 of 2 branches missed.">        if (details.photos().stream().anyMatch(String::isBlank)) errors.add(&quot;One or more photos are unavailable&quot;);</span>
+
+<span class="fc" id="L165">        BigDecimal price = null;</span>
+<span class="fc" id="L166">        long duration = 0;</span>
+<span class="fc bfc" id="L167" title="All 2 branches covered.">        if (details.type() == ListingType.SELL) {</span>
+            try {
+<span class="fc" id="L169">                price = DealService.parseOfferPrice(details.price());</span>
+<span class="fc" id="L170">            } catch (ValidationException e) {</span>
+<span class="fc" id="L171">                errors.add(e.getMessage());</span>
+<span class="fc" id="L172">            }</span>
+        }
+<span class="fc bfc" id="L174" title="All 2 branches covered.">        if (details.type() == ListingType.LEND) {</span>
+            try {
+<span class="fc" id="L176">                duration = Long.parseLong(details.duration().trim());</span>
+<span class="nc" id="L177">            } catch (NumberFormatException | NullPointerException e) {</span>
+<span class="nc" id="L178">                duration = 0;</span>
+<span class="fc" id="L179">            }</span>
+<span class="fc bfc" id="L180" title="All 2 branches covered.">            if (duration &lt; DealService.MIN_BORROW.getSeconds()) {</span>
+<span class="fc" id="L181">                errors.add(&quot;Enter a whole-number lending duration of at least 5 seconds&quot;);</span>
+            }
+        }
+<span class="fc bfc" id="L184" title="All 2 branches covered.">        if (!errors.isEmpty()) throw new ValidationException(errors);</span>
+<span class="fc" id="L185">        return new Terms(price, duration);</span>
+    }
+
+    private static void applyDetails(Listing listing, Details details, Terms terms) {
+<span class="fc" id="L189">        listing.setType(details.type());</span>
+<span class="fc" id="L190">        listing.setTitle(details.title().trim());</span>
+<span class="fc" id="L191">        listing.setCategory(details.category());</span>
+<span class="fc" id="L192">        listing.setCondition(details.condition());</span>
+<span class="fc" id="L193">        listing.setDescription(details.description().trim());</span>
+<span class="fc" id="L194">        listing.setMeetupLocation(details.location());</span>
+<span class="fc" id="L195">        listing.setPrice(terms.price());</span>
+<span class="fc" id="L196">        listing.setLendingDurationSeconds(terms.seconds());</span>
+<span class="fc" id="L197">        listing.getPhotos().clear();</span>
+<span class="fc" id="L198">        listing.getPhotos().addAll(details.photos());</span>
+<span class="fc" id="L199">    }</span>
+
+    private void notifyAdmin(Listing listing, String title) {
+<span class="fc" id="L202">        notifications.notifyAdmins(NotificationCategory.LISTING_UPDATES, title,</span>
+<span class="fc" id="L203">                listing.getTitle() + &quot; is waiting for review.&quot;, listing.getId());</span>
+<span class="fc" id="L204">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

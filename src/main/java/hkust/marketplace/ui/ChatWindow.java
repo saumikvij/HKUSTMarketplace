@@ -36,12 +36,13 @@ import javafx.util.Duration;
  * history. The window polls every second so the seller's replies appear without reopening it.
  */
 public final class ChatWindow {
-    private static final Map<String, Stage> OPEN = new HashMap<>();
+    private static final Map<String, ChatWindow> OPEN = new HashMap<>();
 
     private final AppContext app;
     private final BuyerPortal portal;
     private final ChatThread thread;
     private final ListView<ChatMessage> messages = new ListView<>();
+    private Stage stage;
     private int shownCount = -1;
 
     private ChatWindow(AppContext app, BuyerPortal portal, ChatThread thread) {
@@ -73,27 +74,36 @@ public final class ChatWindow {
      * @param focus message to select, or null
      */
     public static void openThread(AppContext app, BuyerPortal portal, ChatThread thread, ChatMessage focus) {
-        Stage existing = OPEN.get(thread.getId());
-        if (existing != null && existing.isShowing()) {
-            existing.toFront();
-            return;
+        String me = app.currentUser().getId();
+        app.marketplace().chat().requireThread(me, thread.getId());
+        ChatWindow window = OPEN.get(thread.getId());
+        if (window == null) {
+            window = new ChatWindow(app, portal, thread);
+            window.stage = window.build();
+            OPEN.put(thread.getId(), window);
+            window.stage.show();
+        } else {
+            window.stage.toFront();
         }
-        ChatWindow w = new ChatWindow(app, portal, thread);
-        Stage stage = w.build();
-        OPEN.put(thread.getId(), stage);
-        stage.show();
         if (focus != null) {
-            w.messages.getSelectionModel().select(focus);
-            w.messages.scrollTo(focus);
+            window.messages.getSelectionModel().select(focus);
+            window.messages.scrollTo(focus);
         }
+    }
+
+    /** Closes private chat windows when the user logs out. */
+    static void closeAll() {
+        List.copyOf(OPEN.values()).forEach(window -> window.stage.close());
     }
 
     private Stage build() {
         ChatService chat = app.marketplace().chat();
         Listing listing = app.marketplace().store().findListing(thread.getListingId()).orElse(null);
-        String sellerName = app.marketplace().store().findUser(thread.getSellerId()).map(User::getFullName)
-                .orElse("Seller");
-        Label header = Ui.title("Chat with " + sellerName);
+        boolean buyer = app.currentUser().getRole() == Role.BUYER;
+        String otherId = buyer ? thread.getSellerId() : thread.getBuyerId();
+        String otherName = app.marketplace().store().findUser(otherId).map(User::getFullName)
+                .orElse(buyer ? "Seller" : "Buyer");
+        Label header = Ui.title("Chat with " + otherName);
         Label about = Ui.muted("About: " + (listing == null ? "removed listing" : listing.getTitle()));
 
         messages.setCellFactory(v -> new MessageCell());
@@ -127,7 +137,7 @@ public final class ChatWindow {
         });
         Button offer = new Button(listing != null && listing.getType() == ListingType.LEND ? "Request period"
                 : "Make Offer");
-        offer.setVisible(listing != null && listing.getType() != ListingType.GIVEAWAY);
+        offer.setVisible(buyer && listing != null && listing.getType() != ListingType.GIVEAWAY);
         offer.setManaged(offer.isVisible());
         offer.setOnAction(e -> {
             Listing current = app.marketplace().store().findListing(thread.getListingId()).orElse(null);
@@ -139,7 +149,7 @@ public final class ChatWindow {
                     : DealDialogs.makeOffer(app, current);
             if (done) {
                 reload();
-                portal.refreshCurrent();
+                if (portal != null) portal.refreshCurrent();
             }
         });
         send.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
@@ -150,15 +160,8 @@ public final class ChatWindow {
         sendButtons.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         HBox inputRow = new HBox(8, input, sendButtons);
 
-        Optional<String> readOnly = chat.readOnlyReason(thread);
-        Label readOnlyLabel = new Label(readOnly.orElse(""));
+        Label readOnlyLabel = new Label();
         readOnlyLabel.getStyleClass().add("error-text");
-        if (readOnly.isPresent()) {
-            input.setDisable(true);
-            send.setDisable(true);
-            offer.setDisable(true);
-        }
-
         VBox top = new VBox(4, header, about, searchRow);
         VBox bottom = new VBox(6, readOnlyLabel, inputRow);
         BorderPane root = new BorderPane(messages, top, null, bottom, null);
@@ -173,7 +176,18 @@ public final class ChatWindow {
         Ui.applyStyle(scene);
         stage.setScene(scene);
         reload();
-        Timeline poll = new Timeline(new KeyFrame(Duration.seconds(1), e -> reload()));
+        Runnable updateAccess = () -> {
+            Optional<String> reason = chat.readOnlyReason(thread);
+            readOnlyLabel.setText(reason.orElse(""));
+            input.setDisable(reason.isPresent());
+            send.setDisable(reason.isPresent());
+            offer.setDisable(reason.isPresent());
+        };
+        updateAccess.run();
+        Timeline poll = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+            reload();
+            updateAccess.run();
+        }));
         poll.setCycleCount(Timeline.INDEFINITE);
         poll.play();
         stage.setOnHidden(e -> {
@@ -184,8 +198,9 @@ public final class ChatWindow {
     }
 
     private void reload() {
-        List<ChatMessage> all = thread.getMessages();
-        if (all.size() != shownCount) {
+        List<ChatMessage> all = app.marketplace().store().findThread(thread.getId())
+                .map(ChatThread::getMessages).orElseGet(List::of);
+        if (all.size() != shownCount || !messages.getItems().equals(all)) {
             shownCount = all.size();
             messages.getItems().setAll(all);
             if (!all.isEmpty()) {
@@ -217,15 +232,29 @@ public final class ChatWindow {
                 super.updateItem(h, empty);
                 if (empty || h == null) {
                     setText(null);
+                    setGraphic(null);
                     return;
                 }
                 String title = app.marketplace().store().findListing(h.getThread().getListingId())
                         .map(Listing::getTitle).orElse("listing");
-                setText("[" + title + "] " + Ui.time(h.getMessage().getSentAt()) + "\n" + h.getMessage().getText());
+                var flow = new javafx.scene.text.TextFlow();
+                String message = h.getMessage().getText();
+                var matcher = java.util.regex.Pattern.compile(java.util.regex.Pattern.quote(keyword.trim()),
+                        java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE).matcher(message);
+                int end = 0;
+                while (matcher.find()) {
+                    flow.getChildren().add(new javafx.scene.text.Text(message.substring(end, matcher.start())));
+                    var match = new javafx.scene.text.Text(matcher.group());
+                    match.setStyle("-fx-font-weight: bold; -fx-fill: #8a4300;");
+                    flow.getChildren().add(match);
+                    end = matcher.end();
+                }
+                flow.getChildren().add(new javafx.scene.text.Text(message.substring(end)));
+                setGraphic(new VBox(3, Ui.muted(title + " · " + Ui.time(h.getMessage().getSentAt())), flow));
             }
         });
         Stage s = new Stage();
-        s.initOwner(app.stage());
+        s.initOwner(stage);
         s.setTitle(hits.size() + " message(s) found for \"" + keyword.trim() + "\"");
         list.setOnMouseClicked(e -> {
             ChatService.SearchHit h = list.getSelectionModel().getSelectedItem();
@@ -247,7 +276,7 @@ public final class ChatWindow {
         s.show();
     }
 
-    /** Draws a message as a bubble: buyer on the right, seller on the left, offers as highlighted cards. */
+    /** Places the signed-in user’s messages on the right and gives formal offers a distinct style. */
     private final class MessageCell extends ListCell<ChatMessage> {
         @Override
         protected void updateItem(ChatMessage m, boolean empty) {
@@ -257,7 +286,7 @@ public final class ChatWindow {
                 setGraphic(null);
                 return;
             }
-            boolean mine = m.getSenderRole() == Role.BUYER;
+            boolean mine = m.getSenderId().equals(app.currentUser().getId());
             String who = mine ? "You" : app.marketplace().store().findUser(m.getSenderId())
                     .map(User::getFullName).orElse("Seller");
             Label meta = Ui.muted(who + " · " + Ui.time(m.getSentAt()));
