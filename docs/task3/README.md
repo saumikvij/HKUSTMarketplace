@@ -1,8 +1,8 @@
-# Admin Portal · Task 3
+# Admin Portal supplementary notes (Task 3)
 
 HKUST COMP3111 • Group 48 • Task owner: Hasnain Mohammed
 
-This contribution integrates the Admin portal with Saumik Vij’s Buyer implementation from the supplied GitHub main-branch archive `f8f3384bda3c8c1c4b634b9bd51033ed32f9a971`. Both roles use the same JavaFX application, object model and `marketplace-data.ser`. The Seller dashboard is the placeholder present in that archive. A future Seller screen can call `AdminService.submitForReview` to place an item in the queue and notify Admin.
+The Admin, Seller and Buyer portals share one JavaFX application and one Marketplace data store. A seller submits a listing for review. An administrator can approve it for Buyer search or reject it with a reason that the seller can read.
 
 ## Run and demonstrate
 
@@ -38,6 +38,10 @@ Run these steps in one application instance and switch roles using **Log out**. 
 
 ## Verification
 
+The integrated project reports record **132 of 132 tests passed** and **90.5% branch coverage** (835 of 923 branches). See the [team test report](../final/test-report/index.html), [coverage report](../final/coverage/index.html) and [JavaDoc](../final/javadoc/index.html).
+
+The table below records the earlier verification of the Buyer and Admin implementation before the Seller portal was integrated.
+
 | Check | Result |
 | --- | --- |
 | Full JUnit Jupiter suite | **120 passed out of 120**, including all 105 existing cases and 15 new Admin integration cases. Zero skipped or failed. |
@@ -48,15 +52,90 @@ The sources and tests were compiled with the installed Java 21 and JavaFX runtim
 
 [Full JUnit results](junit-results.txt) · [JaCoCo HTML report](coverage/index.html) · [JaCoCo XML](coverage/jacoco.xml) · [Generated service and UI JavaDoc](javadoc/index.html)
 
-### Execution screenshots
+## Execution screenshots
 
-All four screens below were captured from the running shared-theme build at [15e22d7](https://github.com/saumikvij/HKUSTMarketplace/commit/15e22d77f4ccc5531722b648437f69733cf72d89). This walkthrough uses a fresh copy of the seeded demo. After the administrator approved the pending monitor, the review queue cleared and the Buyer search returned one result at HK$600.
+The screenshots below were captured from the running JavaFX app using the shared theme introduced in [15e22d7](https://github.com/saumikvij/HKUSTMarketplace/commit/15e22d77f4ccc5531722b648437f69733cf72d89). The first three sections follow one session with two pending listings. The final section begins with fresh demo data.
 
-The [integrated Admin walkthrough](../../SUBMISSION.md#task-3--admin-portal-hasnain) uses a separate demo session with two pending listings. It shows the keyboard approval, the monitor rejection with a reason, and the [Buyer's search for the approved keyboard](../final/screenshots/integration/b01_buyer_sees_approved_listing.png).
+### Admin login and listing review
 
-| Admin input | Observed output |
-| --- | --- |
-| Select the pending monitor | [Review queue with approval controls](01-admin-queue.png) |
-| Open the cross-platform deal register | [Sales, loans and giveaways with dates and statuses](02-admin-deals.png) |
-| Open the seller ratings register | [Review, score, buyer, seller and visibility](03-admin-ratings.png) |
-| Approve the monitor, log in as Buyer and search for Monitor | [One available listing at HK$600](04-buyer-after-approval.png) |
+**Figure 1.** Enter the seeded administrator credentials on the Admin login form.
+
+![Enter the seeded administrator credentials on the Admin login form.](../final/screenshots/task3-admin/a01_admin_login.png)
+
+**Figure 2.** Select the mechanical keyboard in the queue. The Dell monitor is also awaiting review.
+
+![Select the mechanical keyboard in the queue. The Dell monitor is also awaiting review.](../final/screenshots/task3-admin/a02_review_queue.png)
+
+**Figure 3.** Choose Approve. The confirmation explains that approval will make the keyboard visible to buyers.
+
+![Choose Approve. The confirmation explains that approval will make the keyboard visible to buyers.](../final/screenshots/task3-admin/a03_approve_confirm.png)
+
+**Figure 4.** Confirm the approval. The keyboard leaves the review queue and the monitor remains.
+
+![Confirm the approval. The keyboard leaves the review queue and the monitor remains.](../final/screenshots/task3-admin/a04_listing_approved.png)
+
+**Figure 5.** Select the monitor, choose Reject and enter “Please add a real photo of the monitor.”
+
+![Select the monitor, choose Reject and enter “Please add a real photo of the monitor.”](../final/screenshots/task3-admin/a05_reject_with_reason.png)
+
+**Figure 6.** Confirm the rejection. The queue is empty and the application acknowledges the decision.
+
+![Confirm the rejection. The queue is empty and the application acknowledges the decision.](../final/screenshots/task3-admin/a06_listing_rejected.png)
+
+**Figure 7.** Sign in as a Buyer and search for Mechanical keyboard. One approved listing appears at HK$320.
+
+![Sign in as a Buyer and search for Mechanical keyboard. One approved listing appears at HK$320.](../final/screenshots/integration/b01_buyer_sees_approved_listing.png)
+
+### Listings, reports and user accounts
+
+**Figure 8.** Open All listings to inspect the status and seller for each item.
+
+![Open All listings to inspect the status and seller for each item.](../final/screenshots/task3-admin/a07_all_listings.png)
+
+**Figure 9.** Open Listing reports to inspect the buyer’s report about the headphones.
+
+![Open Listing reports to inspect the buyer’s report about the headphones.](../final/screenshots/task3-admin/a08_listing_reports.png)
+
+**Figure 10.** Open Users to inspect account roles, statuses and registration dates.
+
+![Open Users to inspect account roles, statuses and registration dates.](../final/screenshots/task3-admin/a09_users.png)
+
+**Figure 11.** Choose Add account to open the form for creating a Buyer or Seller account.
+
+![Choose Add account to open the form for creating a Buyer or Seller account.](../final/screenshots/task3-admin/a10_add_account_dialog.png)
+
+### Transactions, notifications, ratings and profile
+
+**Figure 12.** Open All deals to inspect the item, parties, dates and status for each transaction.
+
+![Open All deals to inspect the item, parties, dates and status for each transaction.](../final/screenshots/task3-admin/a11_all_deals.png)
+
+**Figure 13.** Open Notifications to inspect unread notices and their categories.
+
+![Open Notifications to inspect unread notices and their categories.](../final/screenshots/task3-admin/a12_admin_notifications.png)
+
+**Figure 14.** Open Seller ratings to see the review score, comment and public visibility.
+
+![Open Seller ratings to see the review score, comment and public visibility.](../final/screenshots/task3-admin/a13_seller_ratings.png)
+
+**Figure 15.** Open My profile to inspect the administrator’s name and password-change fields.
+
+![Open My profile to inspect the administrator’s name and password-change fields.](../final/screenshots/task3-admin/a14_admin_profile.png)
+
+### Approve the seeded monitor in a fresh demo
+
+**Figure 16.** In a fresh demo, select the pending Dell monitor in the review queue and approve it.
+
+![In a fresh demo, select the pending Dell monitor in the review queue and approve it.](01-admin-queue.png)
+
+**Figure 17.** Open All deals to view the transaction register in the same session.
+
+![Open All deals to view the transaction register in the same session.](02-admin-deals.png)
+
+**Figure 18.** Open Seller ratings to inspect the seeded review.
+
+![Open Seller ratings to inspect the seeded review.](03-admin-ratings.png)
+
+**Figure 19.** Log out, sign in as demo_buyer and search for Monitor. One available Dell monitor appears at HK$600.
+
+![Log out, sign in as demo_buyer and search for Monitor. One available Dell monitor appears at HK$600.](04-buyer-after-approval.png)
