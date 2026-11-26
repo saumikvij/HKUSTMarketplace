@@ -1,5 +1,7 @@
 # HKUST Marketplace — Buyer, Seller and Admin Portals
 
+> **Assessors: start with [SUBMISSION.md](SUBMISSION.md).** It links the screenshots, the unit test report (132/132 passed), the coverage report (90.5% branch), the JavaDoc and the supplementary notes for all three tasks.
+
 **Task 3 · Admin Portal (Hasnain Mohammed, Group 48).** Choose **Admin portal** on the welcome screen and sign in as `admin` / `Admin1234` on a fresh dataset. See [Admin implementation, demonstration and assessment evidence](docs/task3/README.md).
 
 COMP3111 group project, Group 48. Task 1 (Buyer Portal, subtasks 1.1–1.10) by **Saumik Vij** (21010852, svij@connect.ust.hk).

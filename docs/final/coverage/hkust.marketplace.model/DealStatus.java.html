@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DealStatus.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace (COMP3111 G48)</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.model</a> &gt; <span class="el_source">DealStatus.java</span></div><h1>DealStatus.java</h1><pre class="source lang-java linenums">package hkust.marketplace.model;
+
+/** Status of a deal (offer, borrow request or claim) from the buyer's side. */
+<span class="fc" id="L4">public enum DealStatus {</span>
+    /** Submitted, waiting for the seller. */
+<span class="fc" id="L6">    PENDING(&quot;Pending&quot;),</span>
+    /** The seller proposed different terms; waiting for the buyer. */
+<span class="fc" id="L8">    COUNTERED(&quot;Countered&quot;),</span>
+    /** Sell or Giveaway deal agreed; waiting for the buyer to mark it complete. */
+<span class="fc" id="L10">    ACCEPTED(&quot;Accepted&quot;),</span>
+    /** Lend deal agreed; the borrowing period is running. */
+<span class="fc" id="L12">    BORROWED(&quot;Borrowed&quot;),</span>
+    /** Rejected by the seller or buyer, or auto-declined because another deal won. */
+<span class="fc" id="L14">    DECLINED(&quot;Declined&quot;),</span>
+    /** Cancelled by the buyer before the seller answered. */
+<span class="fc" id="L16">    WITHDRAWN(&quot;Withdrawn&quot;),</span>
+    /** The listing was removed while the deal was open. */
+<span class="fc" id="L18">    CANCELLED(&quot;Cancelled&quot;),</span>
+    /** The buyer marked a Sell/Giveaway deal complete. */
+<span class="fc" id="L20">    COMPLETED(&quot;Completed&quot;),</span>
+    /** The buyer returned a borrowed item before the due time. */
+<span class="fc" id="L22">    RETURNED(&quot;Returned&quot;),</span>
+    /** The borrowed item was returned automatically at the due time. */
+<span class="fc" id="L24">    AUTO_RETURNED(&quot;Auto-returned&quot;);</span>
+
+    private final String label;
+
+<span class="fc" id="L28">    DealStatus(String label) { this.label = label; }</span>
+
+    /** @return the name shown in the user interface */
+<span class="fc" id="L31">    public String label() { return label; }</span>
+
+    /** @return true while the deal still needs action (shown under Active in My Deals) */
+    public boolean isActive() {
+<span class="fc bfc" id="L35" title="All 8 branches covered.">        return this == PENDING || this == COUNTERED || this == ACCEPTED || this == BORROWED;</span>
+    }
+
+    /** @return true if the deal finished successfully (shown in Deal History and can be reviewed) */
+    public boolean isFinished() {
+<span class="fc bfc" id="L40" title="All 6 branches covered.">        return this == COMPLETED || this == RETURNED || this == AUTO_RETURNED;</span>
+    }
+
+    /** @return true if the buyer may still withdraw the request */
+    public boolean isOpenRequest() {
+<span class="fc bfc" id="L45" title="All 4 branches covered.">        return this == PENDING || this == COUNTERED;</span>
+    }
+
+<span class="fc" id="L48">    @Override public String toString() { return label; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

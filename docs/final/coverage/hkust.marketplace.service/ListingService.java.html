@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ListingService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace (COMP3111 G48)</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">ListingService.java</span></div><h1>ListingService.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import hkust.marketplace.data.DataStore;
+import hkust.marketplace.model.Listing;
+import hkust.marketplace.model.ListingStatus;
+import hkust.marketplace.model.ListingType;
+import hkust.marketplace.model.NotificationCategory;
+import hkust.marketplace.model.Report;
+import hkust.marketplace.model.ReportReason;
+import hkust.marketplace.model.ReportStatus;
+import hkust.marketplace.model.Seller;
+import hkust.marketplace.model.User;
+import hkust.marketplace.util.Ids;
+import hkust.marketplace.util.MarketplaceException;
+import hkust.marketplace.util.ValidationException;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+/** Browse Marketplace and Listing Detail logic (Tasks 1.3 and 1.4). */
+public class ListingService {
+    /** Format used for dates shown to users. */
+<span class="fc" id="L29">    public static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern(&quot;d MMM yyyy, HH:mm:ss&quot;);</span>
+
+    private final DataStore store;
+    private final Clock clock;
+    private final NotificationService notifications;
+
+    /**
+     * @param store data store
+     * @param clock clock
+     * @param notifications notification service (for reports)
+     */
+<span class="fc" id="L40">    public ListingService(DataStore store, Clock clock, NotificationService notifications) {</span>
+<span class="fc" id="L41">        this.store = store;</span>
+<span class="fc" id="L42">        this.clock = clock;</span>
+<span class="fc" id="L43">        this.notifications = notifications;</span>
+<span class="fc" id="L44">    }</span>
+
+    /**
+     * Returns the listings a buyer can see, searched, filtered and sorted (Task 1.3).
+     * Only approved listings that are Live, Reserved or Lent and whose seller is active are shown.
+     * A price range keeps only Sell listings inside it. When sorting by price, listings without a price
+     * (Lend and Giveaway) come after all Sell listings, newest first.
+     * @param query search settings
+     * @return matching listings
+     * @throws ValidationException if the price range is invalid
+     */
+    public List&lt;Listing&gt; browse(BrowseQuery query) {
+<span class="fc" id="L56">        BigDecimal min = parsePriceBound(query.getMinPrice(), &quot;Minimum price&quot;);</span>
+<span class="fc" id="L57">        BigDecimal max = parsePriceBound(query.getMaxPrice(), &quot;Maximum price&quot;);</span>
+<span class="fc bfc" id="L58" title="All 6 branches covered.">        if (min != null &amp;&amp; max != null &amp;&amp; min.compareTo(max) &gt; 0) {</span>
+<span class="fc" id="L59">            throw new ValidationException(&quot;Minimum price cannot be greater than maximum price&quot;);</span>
+        }
+<span class="fc bfc" id="L61" title="All 2 branches covered.">        String keyword = query.getKeyword() == null ? &quot;&quot; : query.getKeyword().trim().toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L62">        Stream&lt;Listing&gt; stream = store.listings().stream()</span>
+<span class="fc" id="L63">                .filter(this::isVisibleToBuyers)</span>
+<span class="fc bfc" id="L64" title="All 6 branches covered.">                .filter(l -&gt; keyword.isEmpty() || contains(l.getTitle(), keyword) || contains(l.getDescription(), keyword))</span>
+<span class="fc bfc" id="L65" title="All 4 branches covered.">                .filter(l -&gt; query.getCategory() == null || l.getCategory() == query.getCategory())</span>
+<span class="fc bfc" id="L66" title="All 4 branches covered.">                .filter(l -&gt; query.getType() == null || l.getType() == query.getType())</span>
+<span class="fc bfc" id="L67" title="All 4 branches covered.">                .filter(l -&gt; query.getCondition() == null || l.getCondition() == query.getCondition());</span>
+<span class="fc bfc" id="L68" title="All 4 branches covered.">        if (min != null || max != null) {</span>
+<span class="pc bpc" id="L69" title="1 of 6 branches missed.">            stream = stream.filter(l -&gt; l.getType() == ListingType.SELL &amp;&amp; l.getPrice() != null</span>
+<span class="fc bfc" id="L70" title="All 4 branches covered.">                    &amp;&amp; (min == null || l.getPrice().compareTo(min) &gt;= 0)</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">                    &amp;&amp; (max == null || l.getPrice().compareTo(max) &lt;= 0));</span>
+        }
+<span class="fc" id="L73">        Comparator&lt;Listing&gt; newest = Comparator.comparing(Listing::getPostedAt).reversed();</span>
+        Comparator&lt;Listing&gt; order;
+<span class="fc bfc" id="L75" title="All 3 branches covered.">        switch (query.getSort()) {</span>
+            case PRICE_LOW_HIGH:
+<span class="fc bfc" id="L77" title="All 2 branches covered.">                order = Comparator.comparing((Listing l) -&gt; l.getPrice() == null)</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">                        .thenComparing(l -&gt; l.getPrice() == null ? BigDecimal.ZERO : l.getPrice())</span>
+<span class="fc" id="L79">                        .thenComparing(newest);</span>
+<span class="fc" id="L80">                break;</span>
+            case PRICE_HIGH_LOW:
+<span class="fc bfc" id="L82" title="All 2 branches covered.">                order = Comparator.comparing((Listing l) -&gt; l.getPrice() == null)</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">                        .thenComparing(l -&gt; l.getPrice() == null ? BigDecimal.ZERO : l.getPrice(),</span>
+<span class="fc" id="L84">                                Comparator.reverseOrder())</span>
+<span class="fc" id="L85">                        .thenComparing(newest);</span>
+<span class="fc" id="L86">                break;</span>
+            default:
+<span class="fc" id="L88">                order = newest;</span>
+        }
+<span class="fc" id="L90">        return stream.sorted(order).collect(Collectors.toList());</span>
+    }
+
+    /**
+     * @param listing a listing
+     * @return true if its status is browsable and its seller's account is active
+     */
+    public boolean isVisibleToBuyers(Listing listing) {
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        return listing.getStatus().isBrowsable()</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">                &amp;&amp; store.findUser(listing.getSellerId()).map(User::isActive).orElse(false);</span>
+    }
+
+    /**
+     * Opens a listing's detail screen and adds one to its view count (Task 1.4).
+     * @param buyerId buyer opening it
+     * @param listingId listing
+     * @return the listing
+     * @throws MarketplaceException if it was deleted, removed or is no longer approved
+     */
+    public Listing openListing(String buyerId, String listingId) {
+<span class="fc" id="L110">        Access.requireBuyer(store, buyerId);</span>
+<span class="fc" id="L111">        Listing listing = store.findListing(listingId).orElse(null);</span>
+<span class="fc bfc" id="L112" title="All 4 branches covered.">        if (listing == null || !isVisibleToBuyers(listing)) {</span>
+<span class="fc" id="L113">            throw new MarketplaceException(&quot;This listing is no longer available.&quot;);</span>
+        }
+<span class="fc" id="L115">        listing.incrementViewCount();</span>
+<span class="fc" id="L116">        store.commit();</span>
+<span class="fc" id="L117">        return listing;</span>
+    }
+
+    /**
+     * @param listing a listing
+     * @return true if a new offer, borrow request or claim can be made (status Live)
+     */
+    public boolean isOpenForDeals(Listing listing) {
+<span class="fc bfc" id="L125" title="All 2 branches covered.">        return listing.getStatus() == ListingStatus.LIVE;</span>
+    }
+
+    /**
+     * @param listing a listing
+     * @return availability text such as &quot;Available&quot;, &quot;Reserved&quot; or &quot;Lent until 30 Oct 2026, 18:00:00&quot;
+     */
+    public String availabilityText(Listing listing) {
+<span class="fc bfc" id="L133" title="All 6 branches covered.">        switch (listing.getStatus()) {</span>
+<span class="fc" id="L134">            case LIVE: return &quot;Available&quot;;</span>
+<span class="fc" id="L135">            case RESERVED: return &quot;Reserved&quot;;</span>
+            case LENT:
+<span class="fc bfc" id="L137" title="All 2 branches covered.">                return listing.getLentUntil() == null ? &quot;Lent&quot;</span>
+<span class="fc" id="L138">                        : &quot;Lent until &quot; + listing.getLentUntil().format(DISPLAY_TIME);</span>
+<span class="fc" id="L139">            case SOLD: return &quot;Sold&quot;;</span>
+<span class="fc" id="L140">            case GIVEN: return &quot;Given away&quot;;</span>
+<span class="fc" id="L141">            default: return &quot;Not available&quot;;</span>
+        }
+    }
+
+    /**
+     * @param listing a listing
+     * @return its seller
+     */
+    public Seller sellerOf(Listing listing) {
+<span class="fc" id="L150">        return (Seller) store.findUser(listing.getSellerId())</span>
+<span class="fc" id="L151">                .orElseThrow(() -&gt; new MarketplaceException(&quot;Seller not found.&quot;));</span>
+    }
+
+    /**
+     * Reports a listing to the admin (Task 1.4).
+     * @param buyerId reporting buyer
+     * @param listingId listing
+     * @param reason reason (required)
+     * @param comment optional comment; required when the reason is OTHER
+     * @return the stored report
+     * @throws ValidationException if the reason (or the comment for OTHER) is missing
+     * @throws MarketplaceException if the buyer already has an open report on this listing
+     */
+    public Report reportListing(String buyerId, String listingId, ReportReason reason, String comment) {
+<span class="fc" id="L165">        Access.requireBuyer(store, buyerId);</span>
+<span class="fc" id="L166">        Listing listing = store.findListing(listingId)</span>
+<span class="fc" id="L167">                .orElseThrow(() -&gt; new MarketplaceException(&quot;This listing is no longer available.&quot;));</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">        if (reason == null) {</span>
+<span class="fc" id="L169">            throw new ValidationException(&quot;Please choose a reason&quot;);</span>
+        }
+<span class="pc bpc" id="L171" title="1 of 6 branches missed.">        if (reason == ReportReason.OTHER &amp;&amp; (comment == null || comment.isBlank())) {</span>
+<span class="fc" id="L172">            throw new ValidationException(&quot;Please describe the problem when choosing \&quot;Other\&quot;&quot;);</span>
+        }
+<span class="pc bpc" id="L174" title="1 of 2 branches missed.">        boolean alreadyOpen = store.reports().stream().anyMatch(r -&gt; r.getBuyerId().equals(buyerId)</span>
+<span class="pc bpc" id="L175" title="1 of 4 branches missed.">                &amp;&amp; r.getListingId().equals(listingId) &amp;&amp; r.getStatus() == ReportStatus.OPEN);</span>
+<span class="fc bfc" id="L176" title="All 2 branches covered.">        if (alreadyOpen) {</span>
+<span class="fc" id="L177">            throw new MarketplaceException(&quot;You have already reported this listing. It is waiting for admin review.&quot;);</span>
+        }
+<span class="fc" id="L179">        Report report = new Report(Ids.next(&quot;R&quot;), buyerId, listingId, reason,</span>
+<span class="pc bpc" id="L180" title="1 of 4 branches missed.">                comment == null || comment.isBlank() ? null : comment.trim(), LocalDateTime.now(clock));</span>
+<span class="fc" id="L181">        store.putReport(report);</span>
+<span class="fc" id="L182">        notifications.notifyAdmins(NotificationCategory.MODERATION, &quot;Reported listing&quot;,</span>
+<span class="fc" id="L183">                &quot;\&quot;&quot; + listing.getTitle() + &quot;\&quot; was reported: &quot; + reason.label(), listingId);</span>
+<span class="fc" id="L184">        store.commit();</span>
+<span class="fc" id="L185">        return report;</span>
+    }
+
+    private static boolean contains(String text, String keyword) {
+<span class="pc bpc" id="L189" title="1 of 4 branches missed.">        return text != null &amp;&amp; text.toLowerCase(Locale.ROOT).contains(keyword);</span>
+    }
+
+    private static BigDecimal parsePriceBound(String text, String label) {
+<span class="pc bpc" id="L193" title="1 of 4 branches missed.">        if (text == null || text.isBlank()) {</span>
+<span class="fc" id="L194">            return null;</span>
+        }
+        try {
+<span class="fc" id="L197">            BigDecimal value = new BigDecimal(text.trim());</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">            if (value.signum() &lt; 0) {</span>
+<span class="fc" id="L199">                throw new ValidationException(label + &quot; cannot be negative&quot;);</span>
+            }
+<span class="fc" id="L201">            return value;</span>
+<span class="fc" id="L202">        } catch (NumberFormatException e) {</span>
+<span class="fc" id="L203">            throw new ValidationException(label + &quot; must be a number&quot;);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

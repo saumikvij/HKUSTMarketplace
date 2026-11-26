@@ -84,6 +84,17 @@ class DataStoreTest {
     }
 
     @Test
+    void cleanSeedHasOnlyTheAdminAccount() {
+        DataStore s = new DataStore();
+        SeedData.populateAdminOnly(s, clock);
+        assertEquals(1, s.users().size());
+        assertEquals("admin", s.users().iterator().next().getUsername());
+        assertTrue(s.listings().isEmpty());
+        assertTrue(s.deals().isEmpty());
+        assertTrue(s.notifications().isEmpty());
+    }
+
+    @Test
     void usernameLookupIgnoresCaseAndSpaces() {
         DataStore s = new DataStore();
         SeedData.populate(s, clock);

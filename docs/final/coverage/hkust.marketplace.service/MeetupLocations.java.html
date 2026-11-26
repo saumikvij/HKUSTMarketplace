@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MeetupLocations.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace (COMP3111 G48)</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">MeetupLocations.java</span></div><h1>MeetupLocations.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import java.util.List;
+
+/** Predefined campus locations from the skeleton, including locations already in demo records. */
+public final class MeetupLocations {
+<span class="fc" id="L7">    public static final List&lt;String&gt; ALL = List.of(</span>
+            &quot;Academic Building (LG1)&quot;, &quot;LG1 Canteen&quot;, &quot;Atrium&quot;, &quot;Library&quot;, &quot;Student Centre&quot;,
+            &quot;Hall 1 Lobby&quot;, &quot;Hall 2 Lobby&quot;, &quot;Hall 3 Lobby&quot;, &quot;Hall 4 Lobby&quot;, &quot;Hall 5 Lobby&quot;,
+            &quot;Hall 6 Lobby&quot;, &quot;Hall 7 Lobby&quot;, &quot;Hall 8 Lobby&quot;, &quot;Hall 9 Lobby&quot;, &quot;UG Hall 1&quot;, &quot;UG Hall 2&quot;,
+            &quot;North Gate&quot;, &quot;South Gate&quot;, &quot;Shaw Auditorium&quot;, &quot;Coffee Shop (LG5)&quot;, &quot;Sports Hall&quot;);
+
+    private MeetupLocations() { }
+
+    /** Checks one required campus location. */
+    public static boolean contains(String location) {
+<span class="pc bpc" id="L17" title="1 of 4 branches missed.">        return location != null &amp;&amp; ALL.contains(location);</span>
+    }
+
+    static boolean valid(List&lt;String&gt; locations) {
+<span class="pc bpc" id="L21" title="1 of 4 branches missed.">        return locations == null || locations.stream().allMatch(MeetupLocations::contains);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

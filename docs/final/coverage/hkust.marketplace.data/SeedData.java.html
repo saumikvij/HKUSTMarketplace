@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeedData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace (COMP3111 G48)</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.data</a> &gt; <span class="el_source">SeedData.java</span></div><h1>SeedData.java</h1><pre class="source lang-java linenums">package hkust.marketplace.data;
+
+import hkust.marketplace.model.Admin;
+import hkust.marketplace.model.Buyer;
+import hkust.marketplace.model.Category;
+import hkust.marketplace.model.ChatMessage;
+import hkust.marketplace.model.ChatThread;
+import hkust.marketplace.model.Condition;
+import hkust.marketplace.model.Deal;
+import hkust.marketplace.model.DealStatus;
+import hkust.marketplace.model.DealType;
+import hkust.marketplace.model.Listing;
+import hkust.marketplace.model.ListingStatus;
+import hkust.marketplace.model.ListingType;
+import hkust.marketplace.model.Notification;
+import hkust.marketplace.model.NotificationCategory;
+import hkust.marketplace.model.Review;
+import hkust.marketplace.model.Role;
+import hkust.marketplace.model.Seller;
+import hkust.marketplace.util.Ids;
+import hkust.marketplace.util.PasswordHasher;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
+
+/**
+ * Demo data loaded on the first run so every screen has something to show.
+ * &lt;ul&gt;
+ *   &lt;li&gt;Admin: {@code admin} / {@code Admin1234} (seeded; there is no admin registration)&lt;/li&gt;
+ *   &lt;li&gt;Sellers: {@code alice_w} / {@code Seller123}, {@code bob_c} / {@code Seller123}&lt;/li&gt;
+ *   &lt;li&gt;Buyers: {@code demo_buyer} / {@code Buyer123}, {@code chris_l} / {@code Buyer123}&lt;/li&gt;
+ * &lt;/ul&gt;
+ */
+public final class SeedData {
+    /** Prefix for photo paths bundled inside the application. */
+    public static final String RESOURCE_PHOTO = &quot;res:/images/&quot;;
+
+    private SeedData() { }
+
+    /**
+     * Seeds only the administrator account, for a demo that starts from an empty marketplace (no buyers,
+     * sellers, listings or deals). The admin account is needed because admins cannot self-register.
+     * @param store an empty store
+     * @param clock clock used for timestamps
+     */
+    public static void populateAdminOnly(DataStore store, Clock clock) {
+<span class="fc" id="L47">        store.putUser(new Admin(&quot;U-admin&quot;, &quot;admin&quot;, &quot;Marketplace Admin&quot;, hash(&quot;Admin1234&quot;, &quot;c2VlZGFkbWluMDAwMDAw&quot;),</span>
+<span class="fc" id="L48">                &quot;c2VlZGFkbWluMDAwMDAw&quot;, LocalDateTime.now(clock)));</span>
+<span class="fc" id="L49">    }</span>
+
+    /**
+     * Fills an empty store with demo accounts, listings, a finished deal and a review.
+     * @param store an empty store
+     * @param clock clock used for timestamps
+     */
+    public static void populate(DataStore store, Clock clock) {
+<span class="fc" id="L57">        LocalDateTime now = LocalDateTime.now(clock);</span>
+<span class="fc" id="L58">        store.putUser(new Admin(&quot;U-admin&quot;, &quot;admin&quot;, &quot;Marketplace Admin&quot;, hash(&quot;Admin1234&quot;, &quot;c2VlZGFkbWluMDAwMDAw&quot;),</span>
+<span class="fc" id="L59">                &quot;c2VlZGFkbWluMDAwMDAw&quot;, now.minusDays(60)));</span>
+<span class="fc" id="L60">        Seller alice = new Seller(&quot;U-alice&quot;, &quot;alice_w&quot;, &quot;Alice Wong&quot;, hash(&quot;Seller123&quot;, &quot;c2VlZGFsaWNlMDAwMDAw&quot;),</span>
+<span class="fc" id="L61">                &quot;c2VlZGFsaWNlMDAwMDAw&quot;, now.minusDays(40), &quot;Year 3 CompSci, selling my old stuff&quot;);</span>
+<span class="fc" id="L62">        alice.getMeetupLocations().add(&quot;LG1 Canteen&quot;);</span>
+<span class="fc" id="L63">        Seller bob = new Seller(&quot;U-bob&quot;, &quot;bob_c&quot;, &quot;Bob Chan&quot;, hash(&quot;Seller123&quot;, &quot;c2VlZGJvYjAwMDAwMDAw&quot;),</span>
+<span class="fc" id="L64">                &quot;c2VlZGJvYjAwMDAwMDAw&quot;, now.minusDays(35), &quot;Hall 5 resident&quot;);</span>
+<span class="fc" id="L65">        bob.getMeetupLocations().add(&quot;Hall 5 Lobby&quot;);</span>
+<span class="fc" id="L66">        Buyer demo = new Buyer(&quot;U-demo&quot;, &quot;demo_buyer&quot;, &quot;Demo Buyer&quot;, hash(&quot;Buyer123&quot;, &quot;c2VlZGRlbW8wMDAwMDAw&quot;),</span>
+<span class="fc" id="L67">                &quot;c2VlZGRlbW8wMDAwMDAw&quot;, now.minusDays(30), &quot;Hall 1&quot;);</span>
+<span class="fc" id="L68">        Buyer chris = new Buyer(&quot;U-chris&quot;, &quot;chris_l&quot;, &quot;Chris Lee&quot;, hash(&quot;Buyer123&quot;, &quot;c2VlZGNocmlzMDAwMDAw&quot;),</span>
+<span class="fc" id="L69">                &quot;c2VlZGNocmlzMDAwMDAw&quot;, now.minusDays(25), &quot;Off-campus&quot;);</span>
+<span class="fc" id="L70">        store.putUser(alice);</span>
+<span class="fc" id="L71">        store.putUser(bob);</span>
+<span class="fc" id="L72">        store.putUser(demo);</span>
+<span class="fc" id="L73">        store.putUser(chris);</span>
+
+<span class="fc" id="L75">        Listing calc = sell(&quot;L-calc&quot;, alice, &quot;Calculus textbook (Stewart 8e)&quot;, Category.TEXTBOOKS, Condition.USED,</span>
+                &quot;Used for MATH1013. Some highlighting in chapters 2-4, otherwise clean.&quot;, &quot;LG1 Canteen&quot;, &quot;180&quot;,
+<span class="fc" id="L77">                now.minusDays(3), &quot;calculus.png&quot;);</span>
+<span class="fc" id="L78">        Listing lamp = giveaway(&quot;L-lamp&quot;, bob, &quot;Desk lamp&quot;, Category.HOME_AND_KITCHEN, Condition.USED,</span>
+<span class="fc" id="L79">                &quot;Warm white LED desk lamp. Works fine, free to a good home.&quot;, &quot;Hall 5 Lobby&quot;, now.minusDays(2),</span>
+                &quot;lamp.png&quot;);
+<span class="fc" id="L81">        Listing umbrella = lend(&quot;L-umbr&quot;, alice, &quot;Large umbrella&quot;, Category.OTHER, Condition.LIKE_NEW,</span>
+                &quot;Big golf umbrella for rainy days. Borrow it for up to 3 days.&quot;, &quot;Atrium&quot;, 3 * 86_400,
+<span class="fc" id="L83">                now.minusDays(1), &quot;umbrella.png&quot;);</span>
+<span class="fc" id="L84">        Listing headphones = sell(&quot;L-head&quot;, bob, &quot;Noise-cancelling headphones&quot;, Category.ELECTRONICS,</span>
+                Condition.LIKE_NEW, &quot;Over-ear, 30h battery, with case and cable.&quot;, &quot;Hall 5 Lobby&quot;, &quot;450&quot;,
+<span class="fc" id="L86">                now.minusHours(20), &quot;headphones.png&quot;);</span>
+<span class="fc" id="L87">        Listing chair = sell(&quot;L-chair&quot;, alice, &quot;Ergonomic study chair&quot;, Category.FURNITURE, Condition.USED,</span>
+                &quot;Adjustable height and lumbar support. Must pick up from LG1.&quot;, &quot;LG1 Canteen&quot;, &quot;300&quot;,
+<span class="fc" id="L89">                now.minusHours(12), &quot;chair.png&quot;);</span>
+<span class="fc" id="L90">        Listing calcr = lend(&quot;L-calcr&quot;, bob, &quot;Scientific calculator (Casio fx-991)&quot;, Category.STATIONERY,</span>
+                Condition.USED, &quot;Exam-approved calculator. Lend for a day, short loans welcome.&quot;, &quot;Library&quot;,
+<span class="fc" id="L92">                86_400, now.minusHours(6), &quot;calculator.png&quot;);</span>
+<span class="fc" id="L93">        Listing hoodie = giveaway(&quot;L-hood&quot;, alice, &quot;HKUST hoodie (size M)&quot;, Category.CLOTHING, Condition.LIKE_NEW,</span>
+<span class="fc" id="L94">                &quot;Navy HKUST hoodie, worn twice. Free!&quot;, &quot;Atrium&quot;, now.minusHours(3), &quot;hoodie.png&quot;);</span>
+<span class="fc" id="L95">        Listing racket = sell(&quot;L-rack&quot;, bob, &quot;Badminton racket&quot;, Category.SPORTS, Condition.USED,</span>
+<span class="fc" id="L96">                &quot;Yonex racket with new strings and a cover.&quot;, &quot;Sports Hall&quot;, &quot;120&quot;, now.minusHours(1), &quot;racket.png&quot;);</span>
+<span class="fc" id="L97">        Listing pending = sell(&quot;L-pend&quot;, alice, &quot;Dell monitor 24\&quot;&quot;, Category.ELECTRONICS,</span>
+                Condition.USED, &quot;Waiting for admin approval, so buyers cannot see it yet.&quot;, &quot;LG1 Canteen&quot;, &quot;600&quot;,
+<span class="fc" id="L99">                now.minusMinutes(30), &quot;monitor.png&quot;);</span>
+<span class="fc" id="L100">        pending.setStatus(ListingStatus.PENDING_REVIEW);</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        for (Listing l : new Listing[] {calc, lamp, umbrella, headphones, chair, calcr, hoodie, racket, pending}) {</span>
+<span class="fc" id="L102">            store.putListing(l);</span>
+        }
+<span class="fc" id="L104">        calc.incrementViewCount();</span>
+<span class="fc" id="L105">        headphones.incrementViewCount();</span>
+
+        // A finished purchase for the demo buyer (rate it from Deal History) and a review from another buyer.
+<span class="fc" id="L108">        Listing mug = sell(&quot;L-mug&quot;, bob, &quot;HKUST mug&quot;, Category.HOME_AND_KITCHEN, Condition.NEW,</span>
+<span class="fc" id="L109">                &quot;Unused HKUST souvenir mug.&quot;, &quot;Hall 5 Lobby&quot;, &quot;40&quot;, now.minusDays(10), &quot;mug.png&quot;);</span>
+<span class="fc" id="L110">        mug.setStatus(ListingStatus.SOLD);</span>
+<span class="fc" id="L111">        store.putListing(mug);</span>
+<span class="fc" id="L112">        Deal bought = new Deal(&quot;D-mug&quot;, demo.getId(), mug.getId(), DealType.OFFER, now.minusDays(9));</span>
+<span class="fc" id="L113">        bought.setOfferedPrice(new BigDecimal(&quot;35.00&quot;));</span>
+<span class="fc" id="L114">        bought.setStatus(DealStatus.COMPLETED, now.minusDays(8));</span>
+<span class="fc" id="L115">        bought.setCompletedAt(now.minusDays(8));</span>
+<span class="fc" id="L116">        store.putDeal(bought);</span>
+
+<span class="fc" id="L118">        Listing book = sell(&quot;L-book&quot;, bob, &quot;Intro to Economics&quot;, Category.TEXTBOOKS, Condition.USED,</span>
+<span class="fc" id="L119">                &quot;ECON1210 textbook.&quot;, &quot;Hall 5 Lobby&quot;, &quot;90&quot;, now.minusDays(20), &quot;economics.png&quot;);</span>
+<span class="fc" id="L120">        book.setStatus(ListingStatus.SOLD);</span>
+<span class="fc" id="L121">        store.putListing(book);</span>
+<span class="fc" id="L122">        Deal chrisDeal = new Deal(&quot;D-book&quot;, chris.getId(), book.getId(), DealType.OFFER, now.minusDays(19));</span>
+<span class="fc" id="L123">        chrisDeal.setOfferedPrice(new BigDecimal(&quot;90.00&quot;));</span>
+<span class="fc" id="L124">        chrisDeal.setStatus(DealStatus.COMPLETED, now.minusDays(18));</span>
+<span class="fc" id="L125">        chrisDeal.setCompletedAt(now.minusDays(18));</span>
+<span class="fc" id="L126">        store.putDeal(chrisDeal);</span>
+<span class="fc" id="L127">        store.putReview(new Review(&quot;V-book&quot;, chrisDeal.getId(), chris.getId(), bob.getId(), 5,</span>
+<span class="fc" id="L128">                &quot;Book was exactly as described and Bob was on time.&quot;, now.minusDays(17)));</span>
+
+<span class="fc" id="L130">        store.putNotification(new Notification(Ids.next(&quot;N&quot;), demo.getId(), NotificationCategory.ANNOUNCEMENTS,</span>
+                &quot;Welcome to HKUST Marketplace&quot;, &quot;Browse listings, make offers and chat with sellers on campus.&quot;,
+<span class="fc" id="L132">                now.minusDays(30), null));</span>
+<span class="fc" id="L133">        seedActiveDeals(store, now, demo, alice, bob, headphones, hoodie, calcr);</span>
+<span class="fc" id="L134">    }</span>
+
+    /**
+     * Active deals for the demo buyer, so the buyer side of seller decisions (Task 2) can be shown on its own:
+     * a counter-offer to answer, an accepted giveaway claim to mark complete, and a short borrow that
+     * counts down, sends a reminder and is auto-returned a few minutes after the first start.
+     */
+    private static void seedActiveDeals(DataStore store, LocalDateTime now, Buyer demo, Seller alice, Seller bob,
+                                        Listing headphones, Listing hoodie, Listing calcr) {
+<span class="fc" id="L143">        Deal offer = new Deal(&quot;D-head&quot;, demo.getId(), headphones.getId(), DealType.OFFER, now.minusHours(2));</span>
+<span class="fc" id="L144">        offer.setOfferedPrice(new BigDecimal(&quot;380.00&quot;));</span>
+<span class="fc" id="L145">        offer.setMessage(&quot;Would you take 380? I can meet today.&quot;);</span>
+<span class="fc" id="L146">        offer.setCounterPrice(new BigDecimal(&quot;420.00&quot;));</span>
+<span class="fc" id="L147">        offer.setStatus(DealStatus.COUNTERED, now.minusHours(1));</span>
+<span class="fc" id="L148">        store.putDeal(offer);</span>
+<span class="fc" id="L149">        ChatThread chat = new ChatThread(&quot;C-head&quot;, demo.getId(), bob.getId(), headphones.getId());</span>
+<span class="fc" id="L150">        chat.getMessages().add(new ChatMessage(demo.getId(), Role.BUYER, &quot;Hi Bob, are the headphones still available?&quot;,</span>
+<span class="fc" id="L151">                now.minusHours(2).minusMinutes(5), null));</span>
+<span class="fc" id="L152">        chat.getMessages().add(new ChatMessage(bob.getId(), Role.SELLER, &quot;Yes! Battery is still great.&quot;,</span>
+<span class="fc" id="L153">                now.minusHours(2).minusMinutes(3), null));</span>
+<span class="fc" id="L154">        chat.getMessages().add(new ChatMessage(demo.getId(), Role.BUYER,</span>
+<span class="fc" id="L155">                &quot;Offer: HK$380.00 — Would you take 380? I can meet today.&quot;, now.minusHours(2), offer.getId()));</span>
+<span class="fc" id="L156">        chat.getMessages().add(new ChatMessage(bob.getId(), Role.SELLER, &quot;Counter-offer: HK$420.00&quot;,</span>
+<span class="fc" id="L157">                now.minusHours(1), offer.getId()));</span>
+<span class="fc" id="L158">        store.putThread(chat);</span>
+<span class="fc" id="L159">        store.putNotification(new Notification(Ids.next(&quot;N&quot;), demo.getId(), NotificationCategory.DEALS,</span>
+                &quot;Counter-offer received&quot;, &quot;Bob Chan countered your offer on \&quot;Noise-cancelling headphones\&quot; with &quot;
+<span class="fc" id="L161">                + &quot;HK$420.00.&quot;, now.minusHours(1), offer.getId()));</span>
+
+<span class="fc" id="L163">        Deal claim = new Deal(&quot;D-hood&quot;, demo.getId(), hoodie.getId(), DealType.CLAIM, now.minusHours(2));</span>
+<span class="fc" id="L164">        claim.setStatus(DealStatus.ACCEPTED, now.minusMinutes(90));</span>
+<span class="fc" id="L165">        hoodie.setStatus(ListingStatus.RESERVED);</span>
+<span class="fc" id="L166">        store.putDeal(claim);</span>
+<span class="fc" id="L167">        store.putNotification(new Notification(Ids.next(&quot;N&quot;), demo.getId(), NotificationCategory.DEALS,</span>
+<span class="fc" id="L168">                &quot;Claim accepted&quot;, alice.getFullName() + &quot; confirmed your claim on \&quot;&quot; + hoodie.getTitle()</span>
+<span class="fc" id="L169">                + &quot;\&quot;. Pick it up at &quot; + hoodie.getMeetupLocation() + &quot;.&quot;, now.minusMinutes(90), claim.getId()));</span>
+
+<span class="fc" id="L171">        Deal borrow = new Deal(&quot;D-calcr&quot;, demo.getId(), calcr.getId(), DealType.BORROW, now.minusMinutes(5));</span>
+<span class="fc" id="L172">        borrow.setBorrowPeriod(now.minusMinutes(1), now.plusMinutes(3));</span>
+<span class="fc" id="L173">        borrow.setMessage(&quot;Need it for the MATH quiz.&quot;);</span>
+<span class="fc" id="L174">        borrow.setStatus(DealStatus.BORROWED, now.minusMinutes(1));</span>
+<span class="fc" id="L175">        calcr.setStatus(ListingStatus.LENT);</span>
+<span class="fc" id="L176">        calcr.setLentUntil(borrow.getBorrowEnd());</span>
+<span class="fc" id="L177">        store.putDeal(borrow);</span>
+<span class="fc" id="L178">        store.putNotification(new Notification(Ids.next(&quot;N&quot;), demo.getId(), NotificationCategory.BORROWING,</span>
+<span class="fc" id="L179">                &quot;Borrow request accepted&quot;, bob.getFullName() + &quot; accepted your request to borrow \&quot;&quot;</span>
+<span class="fc" id="L180">                + calcr.getTitle() + &quot;\&quot;. Return it by &quot; + borrow.getBorrowEnd().toLocalTime().withNano(0) + &quot;.&quot;,</span>
+<span class="fc" id="L181">                now.minusMinutes(1), borrow.getId()));</span>
+<span class="fc" id="L182">    }</span>
+
+    private static Listing sell(String id, Seller s, String title, Category c, Condition cond, String desc,
+                                String where, String price, LocalDateTime at, String photo) {
+<span class="fc" id="L186">        Listing l = base(id, s, ListingType.SELL, title, c, cond, desc, where, at, photo);</span>
+<span class="fc" id="L187">        l.setPrice(new BigDecimal(price));</span>
+<span class="fc" id="L188">        return l;</span>
+    }
+
+    private static Listing lend(String id, Seller s, String title, Category c, Condition cond, String desc,
+                                String where, long seconds, LocalDateTime at, String photo) {
+<span class="fc" id="L193">        Listing l = base(id, s, ListingType.LEND, title, c, cond, desc, where, at, photo);</span>
+<span class="fc" id="L194">        l.setLendingDurationSeconds(seconds);</span>
+<span class="fc" id="L195">        return l;</span>
+    }
+
+    private static Listing giveaway(String id, Seller s, String title, Category c, Condition cond, String desc,
+                                    String where, LocalDateTime at, String photo) {
+<span class="fc" id="L200">        return base(id, s, ListingType.GIVEAWAY, title, c, cond, desc, where, at, photo);</span>
+    }
+
+    private static Listing base(String id, Seller s, ListingType type, String title, Category c, Condition cond,
+                                String desc, String where, LocalDateTime at, String photo) {
+<span class="fc" id="L205">        Listing l = new Listing(id, s.getId(), type, title, c, cond, desc, where, at);</span>
+<span class="fc" id="L206">        l.setStatus(ListingStatus.LIVE);</span>
+<span class="fc" id="L207">        l.setReviewedAt(at.plusMinutes(10));</span>
+<span class="fc" id="L208">        l.getPhotos().add(RESOURCE_PHOTO + photo);</span>
+<span class="fc" id="L209">        return l;</span>
+    }
+
+    private static String hash(String password, String salt) {
+<span class="fc" id="L213">        return PasswordHasher.hash(password, salt);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

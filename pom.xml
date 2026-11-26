@@ -15,6 +15,8 @@
         <javafx.version>21.0.5</javafx.version>
         <junit.version>5.10.2</junit.version>
         <main.class>hkust.marketplace.Launcher</main.class>
+        <!-- demo = demo accounts and listings, clean = admin account only (mvn javafx:run -Dmarketplace.seed=clean) -->
+        <marketplace.seed>demo</marketplace.seed>
     </properties>
 
     <dependencies>
@@ -40,6 +42,9 @@
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>${main.class}</mainClass>
+                    <options>
+                        <option>-Dmarketplace.seed=${marketplace.seed}</option>
+                    </options>
                 </configuration>
             </plugin>
 
@@ -86,4 +91,14 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Tick "clean-start" in IntelliJ's Maven panel (Profiles) before javafx:run to start with only the admin account. -->
+        <profile>
+            <id>clean-start</id>
+            <properties>
+                <marketplace.seed>clean</marketplace.seed>
+            </properties>
+        </profile>
+    </profiles>
 </project>

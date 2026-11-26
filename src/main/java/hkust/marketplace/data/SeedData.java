@@ -38,6 +38,17 @@ public final class SeedData {
     private SeedData() { }
 
     /**
+     * Seeds only the administrator account, for a demo that starts from an empty marketplace (no buyers,
+     * sellers, listings or deals). The admin account is needed because admins cannot self-register.
+     * @param store an empty store
+     * @param clock clock used for timestamps
+     */
+    public static void populateAdminOnly(DataStore store, Clock clock) {
+        store.putUser(new Admin("U-admin", "admin", "Marketplace Admin", hash("Admin1234", "c2VlZGFkbWluMDAwMDAw"),
+                "c2VlZGFkbWluMDAwMDAw", LocalDateTime.now(clock)));
+    }
+
+    /**
      * Fills an empty store with demo accounts, listings, a finished deal and a review.
      * @param store an empty store
      * @param clock clock used for timestamps
@@ -83,7 +94,7 @@ public final class SeedData {
                 "Navy HKUST hoodie, worn twice. Free!", "Atrium", now.minusHours(3), "hoodie.png");
         Listing racket = sell("L-rack", bob, "Badminton racket", Category.SPORTS, Condition.USED,
                 "Yonex racket with new strings and a cover.", "Sports Hall", "120", now.minusHours(1), "racket.png");
-        Listing pending = sell("L-pend", alice, "Monitor 24\" (waiting for review)", Category.ELECTRONICS,
+        Listing pending = sell("L-pend", alice, "Dell monitor 24\"", Category.ELECTRONICS,
                 Condition.USED, "Waiting for admin approval, so buyers cannot see it yet.", "LG1 Canteen", "600",
                 now.minusMinutes(30), "monitor.png");
         pending.setStatus(ListingStatus.PENDING_REVIEW);

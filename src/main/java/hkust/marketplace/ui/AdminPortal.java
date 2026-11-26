@@ -36,7 +36,7 @@ public final class AdminPortal {
     }
     /** Creates the portal and initially displays the approval queue. */
     public Parent build() {
-        Label brand = new Label("HKUST Marketplace"); brand.getStyleClass().add("brand");
+        Label brand = new Label("HKUST Marketplace"); brand.getStyleClass().add("brand"); brand.setWrapText(true);
         VBox side = new VBox(7,brand,who); side.setPrefWidth(210); side.setPadding(new Insets(18));
         side.getStyleClass().add("sidebar");
         for (String page : List.of("Review queue","All listings","Listing reports","Users","All deals","Notifications","Seller ratings","My profile")) {

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminRecords.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace (COMP3111 G48)</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">AdminRecords.java</span></div><h1>AdminRecords.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import hkust.marketplace.data.DataStore;
+import hkust.marketplace.model.*;
+import hkust.marketplace.util.ValidationException;
+import java.time.*;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/** Read models and filters for admin oversight. Dates are inclusive and use the application's local clock. */
+public final class AdminRecords {
+    private final Marketplace market;
+    private final String admin;
+<span class="fc" id="L14">    public AdminRecords(Marketplace market, String admin) {</span>
+<span class="fc" id="L15">        this.market = market;</span>
+<span class="fc" id="L16">        this.admin = admin;</span>
+<span class="fc" id="L17">        market.admin().requireAdmin(admin);</span>
+<span class="fc" id="L18">    }</span>
+<span class="fc" id="L19">    private DataStore data() { market.admin().requireAdmin(admin); return market.store(); }</span>
+<span class="fc" id="L20">    public String username(String id) { return data().findUser(id).map(User::getUsername).orElse(&quot;Unknown&quot;); }</span>
+<span class="fc" id="L21">    public Listing listing(String id) { return data().findListing(id).orElseThrow(); }</span>
+    public String reviewItem(Review r) {
+<span class="nc" id="L23">        return data().findDeal(r.getDealId()).map(d -&gt; listing(d.getListingId()).getTitle()).orElse(&quot;Unknown listing&quot;);</span>
+    }
+    private static boolean matches(String query, String value) {
+<span class="pc bpc" id="L26" title="1 of 4 branches missed.">        return query == null || value.toLowerCase(Locale.ROOT).contains(query.strip().toLowerCase(Locale.ROOT));</span>
+    }
+    /** Inclusive date interval with optional boundaries. */
+    public record Dates(LocalDate from, LocalDate until) {
+<span class="fc" id="L30">        public Dates {</span>
+<span class="fc bfc" id="L31" title="All 6 branches covered.">            if (from != null &amp;&amp; until != null &amp;&amp; from.isAfter(until)) throw new ValidationException(&quot;Start date must be on or before the end date.&quot;);</span>
+<span class="fc" id="L32">        }</span>
+        boolean contains(LocalDateTime value) {
+<span class="fc" id="L34">            LocalDate day = value.toLocalDate();</span>
+<span class="pc bpc" id="L35" title="1 of 8 branches missed.">            return (from == null || !day.isBefore(from)) &amp;&amp; (until == null || !day.isAfter(until));</span>
+        }
+    }
+    public List&lt;User&gt; users(String query, Role role) {
+<span class="pc bpc" id="L39" title="1 of 6 branches missed.">        return data().users().stream().filter(u -&gt; u.getRole() != Role.ADMIN &amp;&amp; (role == null || u.getRole() == role))</span>
+<span class="fc" id="L40">                .filter(u -&gt; matches(query, u.getUsername() + &quot; &quot; + u.getFullName())).toList();</span>
+    }
+    public List&lt;Listing&gt; listings(boolean pending, String query, ListingStatus status) {
+<span class="fc bfc" id="L43" title="All 4 branches covered.">        return market.admin().listings(admin, pending).stream().filter(l -&gt; status == null || status == l.getStatus())</span>
+<span class="fc" id="L44">                .filter(l -&gt; matches(query, l.getTitle() + &quot; &quot; + username(l.getSellerId()))).toList();</span>
+    }
+    public List&lt;Report&gt; reports(String id) {
+<span class="pc bpc" id="L47" title="3 of 6 branches missed.">        return data().reports().stream().filter(r -&gt; r.getStatus() == ReportStatus.OPEN &amp;&amp; (id == null || r.getListingId().equals(id)))</span>
+<span class="fc" id="L48">                .sorted(Comparator.comparing(Report::getReportedAt).reversed()).toList();</span>
+    }
+<span class="fc" id="L50">    public enum Stage { ACTIVE, FINISHED, CLOSED }</span>
+    /** Returns the transactions currently displayed or exported. */
+    public List&lt;Deal&gt; deals(String query, DealType type, Stage stage) {
+<span class="fc bfc" id="L53" title="All 4 branches covered.">        return data().deals().stream().filter(d -&gt; type == null || type == d.getType())</span>
+<span class="fc bfc" id="L54" title="All 4 branches covered.">                .filter(d -&gt; stage == null || stage == (d.getStatus().isActive() ? Stage.ACTIVE :</span>
+<span class="pc bpc" id="L55" title="1 of 4 branches missed.">                        d.getStatus().isFinished() ? Stage.FINISHED : Stage.CLOSED))</span>
+<span class="fc" id="L56">                .filter(d -&gt; matches(query, listing(d.getListingId()).getTitle() + &quot; &quot; + username(d.getBuyerId())</span>
+<span class="fc" id="L57">                        + &quot; &quot; + username(listing(d.getListingId()).getSellerId())))</span>
+<span class="fc" id="L58">                .sorted(Comparator.comparing(Deal::getSubmittedAt).reversed()).toList();</span>
+    }
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">    public LocalDateTime start(Deal d) { return d.getBorrowStart() == null ? d.getSubmittedAt() : d.getBorrowStart(); }</span>
+<span class="pc bpc" id="L61" title="1 of 2 branches missed.">    public LocalDateTime end(Deal d) { return d.getCompletedAt() == null ? d.getBorrowEnd() : d.getCompletedAt(); }</span>
+    /** Quotes fields and guards spreadsheet formula prefixes in user-entered values. */
+    public String csv(List&lt;Deal&gt; shown) {
+<span class="fc" id="L64">        data();</span>
+<span class="fc" id="L65">        StringBuilder out = new StringBuilder(&quot;Item title,Buyer,Seller,Type,Start,Return or completion,Status\r\n&quot;);</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        for (Deal d : shown) {</span>
+<span class="fc" id="L67">            Listing l = listing(d.getListingId());</span>
+<span class="fc" id="L68">            List&lt;String&gt; row = List.of(l.getTitle(),username(d.getBuyerId()),username(l.getSellerId()),d.getType().label(),</span>
+<span class="fc" id="L69">                    start(d).toString(), Objects.toString(end(d), &quot;&quot;), d.getStatus().label());</span>
+<span class="fc" id="L70">            out.append(row.stream().map(AdminRecords::csvCell).collect(Collectors.joining(&quot;,&quot;))).append(&quot;\r\n&quot;);</span>
+<span class="fc" id="L71">        }</span>
+<span class="fc" id="L72">        return out.toString();</span>
+    }
+    private static String csvCell(String s) {
+<span class="pc bpc" id="L75" title="1 of 6 branches missed.">        if (!s.isEmpty() &amp;&amp; (&quot;=+-@&quot;.indexOf(s.stripLeading().isEmpty() ? ' ' : s.stripLeading().charAt(0)) &gt;= 0</span>
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">                || &quot;\t\r\n&quot;.indexOf(s.charAt(0)) &gt;= 0)) s = &quot;'&quot; + s;</span>
+<span class="fc" id="L77">        return &quot;\&quot;&quot; + s.replace(&quot;\&quot;&quot;, &quot;\&quot;\&quot;&quot;) + &quot;\&quot;&quot;;</span>
+    }
+    public List&lt;Review&gt; ratings(String query, Integer score, Dates dates, boolean flaggedOnly) {
+<span class="fc bfc" id="L80" title="All 4 branches covered.">        return data().reviews().stream().filter(r -&gt; !flaggedOnly || r.isFlagged())</span>
+<span class="fc bfc" id="L81" title="All 4 branches covered.">                .filter(r -&gt; score == null || r.getRating() == score).filter(r -&gt; dates.contains(r.getPostedAt()))</span>
+<span class="fc" id="L82">                .filter(r -&gt; matches(query, username(r.getBuyerId()) + &quot; &quot; + username(r.getSellerId())))</span>
+<span class="fc" id="L83">                .sorted(Comparator.comparing(Review::isFlagged).thenComparing(Review::getPostedAt).reversed()).toList();</span>
+    }
+    public List&lt;Notification&gt; notifications(NotificationCategory category, Dates dates, boolean archive) {
+<span class="fc" id="L86">        data();</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        return market.notifications().forUser(admin, category, false).stream().filter(n -&gt; n.isArchived() == archive)</span>
+<span class="fc" id="L88">                .filter(n -&gt; dates.contains(n.getCreatedAt())).toList();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

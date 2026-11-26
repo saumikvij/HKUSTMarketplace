@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace (COMP3111 G48)</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.service</a> &gt; <span class="el_source">AdminService.java</span></div><h1>AdminService.java</h1><pre class="source lang-java linenums">package hkust.marketplace.service;
+
+import hkust.marketplace.data.DataStore;
+import hkust.marketplace.model.*;
+import hkust.marketplace.util.*;
+import java.time.LocalDateTime;
+import java.util.*;
+import static hkust.marketplace.model.NotificationCategory.*;
+
+/** Administration of the same persistent records used by the Buyer and Seller services (tasks 3.2–3.8). */
+public final class AdminService {
+    private final Marketplace market;
+    private final DataStore store;
+<span class="fc" id="L14">    AdminService(Marketplace market) { this.market = market; this.store = market.store(); }</span>
+
+    /** Checks the role and current account state at the service boundary. */
+    public Admin requireAdmin(String id) {
+<span class="fc" id="L18">        User u = store.findUser(id).orElse(null);</span>
+<span class="pc bpc" id="L19" title="1 of 4 branches missed.">        if (!(u instanceof Admin admin) || !admin.isActive()) throw new MarketplaceException(&quot;An active admin account is required.&quot;);</span>
+<span class="fc" id="L20">        return admin;</span>
+    }
+
+<span class="fc" id="L23">    private LocalDateTime now() { return LocalDateTime.now(market.clock()); }</span>
+    private Listing listing(String id) {
+<span class="pc" id="L25">        return store.findListing(id).orElseThrow(() -&gt; new MarketplaceException(&quot;Listing no longer exists.&quot;));</span>
+    }
+    private User account(String id) {
+<span class="pc" id="L28">        User user = store.findUser(id).orElseThrow(() -&gt; new MarketplaceException(&quot;Account not found.&quot;));</span>
+<span class="fc bfc" id="L29" title="All 4 branches covered.">        if (user instanceof Admin || user.getStatus() == AccountStatus.DELETED)</span>
+<span class="fc" id="L30">            throw new MarketplaceException(&quot;Choose an existing buyer or seller.&quot;);</span>
+<span class="fc" id="L31">        return user;</span>
+    }
+    private void audit(String admin, NotificationCategory category, String title, String detail, String related) {
+<span class="fc" id="L34">        market.notifications().notifyAdmins(category, title, requireAdmin(admin).getUsername() + &quot; — &quot; + detail, related);</span>
+<span class="fc" id="L35">    }</span>
+    private void tell(String id, NotificationCategory category, String title, String detail, String related) {
+<span class="fc" id="L37">        market.notifications().notify(id, category, title, detail, related);</span>
+<span class="fc" id="L38">    }</span>
+
+    /** Adds missing queue alerts for pending listings in an existing Buyer-only data file. */
+    public void syncPendingAlerts(String admin) {
+<span class="fc" id="L42">        synchronized (store) {</span>
+<span class="fc" id="L43">            requireAdmin(admin);</span>
+<span class="fc" id="L44">            Set&lt;String&gt; existing = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L45" title="All 2 branches covered.">            for (Notification n : market.notifications().forUser(admin, LISTING_UPDATES, false)) {</span>
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">                if (n.getRelatedId() != null) existing.add(n.getRelatedId());</span>
+<span class="fc" id="L47">            }</span>
+<span class="fc" id="L48">            boolean changed = false;</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">            for (Listing l : listings(admin, true)) {</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">                if (existing.add(l.getId())) {</span>
+<span class="fc" id="L51">                    tell(admin, LISTING_UPDATES, &quot;Listing awaiting review&quot;, l.getTitle(), l.getId());</span>
+<span class="fc" id="L52">                    changed = true;</span>
+                }
+<span class="fc" id="L54">            }</span>
+<span class="fc bfc" id="L55" title="All 2 branches covered.">            if (changed) store.commit();</span>
+<span class="fc" id="L56">        }</span>
+<span class="fc" id="L57">    }</span>
+
+    /** Returns pending submissions only when requested, otherwise all listings, newest first. */
+    public List&lt;Listing&gt; listings(String admin, boolean pending) {
+<span class="fc" id="L61">        requireAdmin(admin);</span>
+<span class="fc bfc" id="L62" title="All 4 branches covered.">        return store.listings().stream().filter(l -&gt; !pending || l.getStatus() == ListingStatus.PENDING_REVIEW)</span>
+<span class="fc" id="L63">                .sorted(Comparator.comparing(Listing::getPostedAt).reversed()).toList();</span>
+    }
+
+    /** Approves a pending submission or rejects it with a recorded reason and a seller notification. */
+    public void review(String admin, String id, boolean approve, String reason) {
+<span class="fc" id="L68">        synchronized (store) {</span>
+<span class="fc" id="L69">            requireAdmin(admin);</span>
+<span class="fc" id="L70">            Listing l = listing(id);</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">            if (l.getStatus() != ListingStatus.PENDING_REVIEW) throw new MarketplaceException(&quot;This submission has already changed.&quot;);</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">            if (approve) Access.requireSeller(store, l.getSellerId());</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">            String explanation = approve ? null : ListingForm.required(reason, &quot;Rejection reason&quot;);</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">            l.setStatus(approve ? ListingStatus.LIVE : ListingStatus.REJECTED);</span>
+<span class="fc" id="L75">            l.setRejectionReason(explanation);</span>
+<span class="fc" id="L76">            l.setReviewedAt(now());</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">            tell(l.getSellerId(), LISTING_UPDATES, approve ? &quot;Listing approved&quot; : &quot;Listing rejected&quot;,</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">                    l.getTitle() + (approve ? &quot; is now live.&quot; : &quot;: &quot; + explanation), id);</span>
+<span class="fc" id="L79">            store.commit();</span>
+<span class="fc" id="L80">        }</span>
+<span class="fc" id="L81">    }</span>
+
+    /** Adds an already approved listing directly to the selected active seller's inventory. */
+    public Listing addListing(String admin, String sellerId, ListingForm form) {
+<span class="fc" id="L85">        synchronized (store) {</span>
+<span class="fc" id="L86">            requireAdmin(admin);</span>
+<span class="fc" id="L87">            Access.requireSeller(store, sellerId);</span>
+<span class="fc" id="L88">            Listing l = create(sellerId, form);</span>
+<span class="fc" id="L89">            l.setReviewedAt(now());</span>
+<span class="fc" id="L90">            l.setStatus(ListingStatus.LIVE);</span>
+<span class="fc" id="L91">            tell(sellerId, LISTING_UPDATES, &quot;Listing added by admin&quot;, l.getTitle(), l.getId());</span>
+<span class="fc" id="L92">            store.commit();</span>
+<span class="fc" id="L93">            return l;</span>
+        }
+    }
+
+    /** Seller integration point: submits an item to the queue and alerts the administrators. */
+    public Listing submitForReview(String seller, ListingForm form) {
+<span class="fc" id="L99">        synchronized (store) {</span>
+<span class="fc" id="L100">            Access.requireSeller(store, seller);</span>
+<span class="fc" id="L101">            Listing l = create(seller, form);</span>
+<span class="fc" id="L102">            market.notifications().notifyAdmins(LISTING_UPDATES, &quot;Listing awaiting review&quot;, l.getTitle(), l.getId());</span>
+<span class="fc" id="L103">            store.commit();</span>
+<span class="fc" id="L104">            return l;</span>
+        }
+    }
+    private Listing create(String seller, ListingForm f) {
+<span class="fc" id="L108">        Listing l = new Listing(Ids.next(&quot;L&quot;), seller, f.type(), f.title(), f.category(), f.condition(),</span>
+<span class="fc" id="L109">                f.description(), f.location(), now());</span>
+<span class="fc" id="L110">        f.apply(l);</span>
+<span class="fc" id="L111">        store.putListing(l);</span>
+<span class="fc" id="L112">        return l;</span>
+    }
+
+    /** Applies an edit only if the displayed status is current. Deal type is fixed once a deal exists. */
+    public void editListing(String admin, String id, ListingStatus expected, ListingForm f) {
+<span class="fc" id="L117">        synchronized (store) {</span>
+<span class="fc" id="L118">            requireAdmin(admin);</span>
+<span class="fc" id="L119">            Listing l = listing(id);</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">            if (l.getStatus() != expected) throw new MarketplaceException(&quot;Status changed. Reopen the listing and review the latest details.&quot;);</span>
+<span class="fc bfc" id="L121" title="All 4 branches covered.">            if (l.getType() != f.type() &amp;&amp; store.deals().stream().anyMatch(d -&gt; d.getListingId().equals(id)))</span>
+<span class="fc" id="L122">                throw new MarketplaceException(&quot;The listing type is referenced by existing deals.&quot;);</span>
+<span class="fc" id="L123">            f.apply(l);</span>
+<span class="fc" id="L124">            tell(l.getSellerId(), LISTING_UPDATES, &quot;Listing edited by admin&quot;, l.getTitle(), id);</span>
+<span class="fc" id="L125">            store.commit();</span>
+<span class="fc" id="L126">        }</span>
+<span class="fc" id="L127">    }</span>
+
+    /** Removes a live item, cancels active requests, informs their participants and resolves open reports. */
+    public void takeDown(String admin, String id, String reason) {
+<span class="fc" id="L131">        synchronized (store) {</span>
+<span class="fc" id="L132">            requireAdmin(admin);</span>
+<span class="fc" id="L133">            Listing l = listing(id);</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">            if (l.getStatus() != ListingStatus.LIVE) throw new MarketplaceException(&quot;Only a live listing can be taken down.&quot;);</span>
+<span class="fc" id="L135">            String why = ListingForm.required(reason, &quot;Take-down reason&quot;);</span>
+<span class="fc" id="L136">            remove(l, why);</span>
+<span class="fc bfc" id="L137" title="All 2 branches covered.">            for (Deal d : store.deals()) {</span>
+<span class="pc bpc" id="L138" title="1 of 4 branches missed.">                if (d.getListingId().equals(id) &amp;&amp; d.getStatus().isOpenRequest()) cancel(d, l, why, true, false);</span>
+<span class="fc" id="L139">            }</span>
+<span class="fc" id="L140">            tell(l.getSellerId(), LISTING_UPDATES, &quot;Listing taken down&quot;, l.getTitle() + &quot;: &quot; + why, id);</span>
+<span class="fc" id="L141">            audit(admin, MODERATION, &quot;Listing taken down&quot;, l.getTitle() + &quot;: &quot; + why, id);</span>
+<span class="fc" id="L142">            store.commit();</span>
+<span class="fc" id="L143">        }</span>
+<span class="fc" id="L144">    }</span>
+    private void remove(Listing l, String why) {
+<span class="fc" id="L146">        l.setStatus(ListingStatus.REMOVED);</span>
+<span class="fc" id="L147">        l.setRemovalReason(why);</span>
+<span class="fc" id="L148">        closeReports(l.getId(), ReportStatus.RESOLVED);</span>
+<span class="fc" id="L149">    }</span>
+    private boolean closeReports(String listingId, ReportStatus status) {
+<span class="fc" id="L151">        boolean changed = false;</span>
+<span class="fc bfc" id="L152" title="All 2 branches covered.">        for (Report r : store.reports()) {</span>
+<span class="pc bpc" id="L153" title="1 of 4 branches missed.">            if (r.getListingId().equals(listingId) &amp;&amp; r.getStatus() == ReportStatus.OPEN) {</span>
+<span class="fc" id="L154">                r.setStatus(status);</span>
+<span class="fc" id="L155">                changed = true;</span>
+            }
+<span class="fc" id="L157">        }</span>
+<span class="fc" id="L158">        return changed;</span>
+    }
+    /** Dismisses all outstanding reports on a listing without changing its visibility. */
+    public void dismissReports(String admin, String id) {
+<span class="fc" id="L162">        synchronized (store) {</span>
+<span class="fc" id="L163">            requireAdmin(admin);</span>
+<span class="fc bfc" id="L164" title="All 2 branches covered.">            if (!closeReports(id, ReportStatus.DISMISSED)) throw new MarketplaceException(&quot;No open reports for this listing.&quot;);</span>
+<span class="fc" id="L165">            audit(admin, MODERATION, &quot;Reports dismissed&quot;, listing(id).getTitle(), id);</span>
+<span class="fc" id="L166">            store.commit();</span>
+<span class="fc" id="L167">        }</span>
+<span class="fc" id="L168">    }</span>
+    private void cancel(Deal d, Listing l, String why, boolean buyer, boolean seller) {
+<span class="fc bfc" id="L170" title="All 2 branches covered.">        boolean reserved = l.getStatus() == ListingStatus.RESERVED &amp;&amp;</span>
+<span class="pc bpc" id="L171" title="1 of 4 branches missed.">                (d.getStatus() == DealStatus.ACCEPTED || d.getType() == DealType.CLAIM);</span>
+<span class="fc" id="L172">        d.setStatus(DealStatus.CANCELLED, now());</span>
+<span class="fc bfc" id="L173" title="All 2 branches covered.">        if (reserved) l.setStatus(ListingStatus.LIVE);</span>
+<span class="fc" id="L174">        String detail = l.getTitle() + &quot;: &quot; + why;</span>
+<span class="fc bfc" id="L175" title="All 2 branches covered.">        if (buyer) tell(d.getBuyerId(), DEALS, &quot;Transaction cancelled&quot;, detail, d.getId());</span>
+<span class="fc bfc" id="L176" title="All 2 branches covered.">        if (seller) tell(l.getSellerId(), DEALS, &quot;Transaction cancelled&quot;, detail, d.getId());</span>
+<span class="fc" id="L177">    }</span>
+
+    /** Creates an active buyer or seller using the project's shared credential rules. */
+    public User addUser(String admin, Role role, String username, String name, String password, String confirmation) {
+<span class="fc" id="L181">        synchronized (store) {</span>
+<span class="fc" id="L182">            requireAdmin(admin);</span>
+<span class="fc bfc" id="L183" title="All 4 branches covered.">            if (role != Role.BUYER &amp;&amp; role != Role.SELLER) throw new ValidationException(&quot;Choose buyer or seller.&quot;);</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">            if (!CredentialValidator.isValidUsername(username)) throw new ValidationException(&quot;Use letters, digits and underscores for the username.&quot;);</span>
+<span class="fc" id="L185">            name = fullName(name);</span>
+<span class="fc" id="L186">            List&lt;String&gt; errors = CredentialValidator.passwordProblems(password);</span>
+<span class="fc bfc" id="L187" title="All 2 branches covered.">            if (!errors.isEmpty()) throw new ValidationException(errors);</span>
+<span class="fc bfc" id="L188" title="All 2 branches covered.">            if (!password.equals(confirmation)) throw new ValidationException(&quot;Passwords do not match.&quot;);</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">            if (store.findUserByUsername(username).isPresent()) throw new ValidationException(&quot;Username is taken.&quot;);</span>
+<span class="fc" id="L190">            String id = Ids.next(&quot;U&quot;), salt = PasswordHasher.newSalt();</span>
+<span class="fc" id="L191">            String hash = PasswordHasher.hash(password, salt);</span>
+<span class="fc bfc" id="L192" title="All 2 branches covered.">            User user = role == Role.BUYER ? new Buyer(id,username.trim(),name,hash,salt,now(),null)</span>
+<span class="fc" id="L193">                    : new Seller(id,username.trim(),name,hash,salt,now(),null);</span>
+<span class="fc" id="L194">            store.putUser(user);</span>
+<span class="fc" id="L195">            audit(admin, ACCOUNT, &quot;Account created&quot;, user.getUsername(), id);</span>
+<span class="fc" id="L196">            store.commit();</span>
+<span class="fc" id="L197">            return user;</span>
+        }
+    }
+    private String fullName(String name) {
+<span class="fc bfc" id="L201" title="All 2 branches covered.">        if (!CredentialValidator.isValidFullName(name)) throw new ValidationException(&quot;Enter a full name of 1–50 characters.&quot;);</span>
+<span class="fc" id="L202">        return name.trim();</span>
+    }
+    /** Edits a buyer's or seller's display name. */
+    public void rename(String admin, String id, String name) {
+<span class="fc" id="L206">        synchronized (store) {</span>
+<span class="fc" id="L207">            requireAdmin(admin);</span>
+<span class="fc" id="L208">            User user = account(id);</span>
+<span class="fc" id="L209">            user.setFullName(fullName(name));</span>
+<span class="fc" id="L210">            audit(admin, ACCOUNT, &quot;Account updated&quot;, user.getUsername(), id);</span>
+<span class="fc" id="L211">            store.commit();</span>
+<span class="fc" id="L212">        }</span>
+<span class="fc" id="L213">    }</span>
+    /** Deactivation hides listings through the existing browse rules. Reactivation restores eligibility. */
+    public void setActive(String admin, String id, boolean active) {
+<span class="fc" id="L216">        synchronized (store) {</span>
+<span class="fc" id="L217">            requireAdmin(admin);</span>
+<span class="fc" id="L218">            User user = account(id);</span>
+<span class="fc bfc" id="L219" title="All 2 branches covered.">            if (user.isActive() == active) throw new MarketplaceException(&quot;Account is already in this state.&quot;);</span>
+<span class="fc bfc" id="L220" title="All 2 branches covered.">            user.setStatus(active ? AccountStatus.ACTIVE : AccountStatus.DEACTIVATED);</span>
+<span class="fc bfc" id="L221" title="All 2 branches covered.">            audit(admin, ACCOUNT, active ? &quot;Account reactivated&quot; : &quot;Account deactivated&quot;, user.getUsername(), id);</span>
+<span class="fc" id="L222">            store.commit();</span>
+<span class="fc" id="L223">        }</span>
+<span class="fc" id="L224">    }</span>
+    /** Anonymises an account, cancels its commitments and keeps historical ids. An outstanding loan blocks deletion. */
+    public void deleteUser(String admin, String id) {
+<span class="fc" id="L227">        synchronized (store) {</span>
+<span class="fc" id="L228">            requireAdmin(admin);</span>
+<span class="fc" id="L229">            User user = account(id);</span>
+<span class="fc bfc" id="L230" title="All 2 branches covered.">            List&lt;Deal&gt; involved = store.deals().stream().filter(d -&gt; d.getBuyerId().equals(id)</span>
+<span class="fc bfc" id="L231" title="All 2 branches covered.">                    || listing(d.getListingId()).getSellerId().equals(id)).toList();</span>
+<span class="fc bfc" id="L232" title="All 4 branches covered.">            if (involved.stream().anyMatch(d -&gt; d.getStatus() == DealStatus.BORROWED))</span>
+<span class="fc" id="L233">                throw new MarketplaceException(&quot;Return outstanding loans before deleting this account.&quot;);</span>
+<span class="fc bfc" id="L234" title="All 2 branches covered.">            for (Deal d : involved) {</span>
+<span class="fc bfc" id="L235" title="All 2 branches covered.">                if (d.getStatus().isActive()) {</span>
+<span class="fc" id="L236">                    Listing l = listing(d.getListingId());</span>
+<span class="fc bfc" id="L237" title="All 4 branches covered.">                    cancel(d, l, &quot;Account deleted&quot;, !id.equals(d.getBuyerId()), !id.equals(l.getSellerId()));</span>
+                }
+<span class="fc" id="L239">            }</span>
+<span class="fc bfc" id="L240" title="All 2 branches covered.">            for (Listing l : store.listings()) {</span>
+<span class="pc bpc" id="L241" title="1 of 6 branches missed.">                if (id.equals(l.getSellerId()) &amp;&amp; (l.getStatus() == ListingStatus.PENDING_REVIEW || l.getStatus() == ListingStatus.LIVE))</span>
+<span class="fc" id="L242">                    remove(l, &quot;Seller account deleted&quot;);</span>
+<span class="fc" id="L243">            }</span>
+<span class="fc" id="L244">            user.anonymise(&quot;deleted-&quot; + UUID.randomUUID());</span>
+<span class="fc" id="L245">            audit(admin, ACCOUNT, &quot;Account deleted&quot;, &quot;Historical account ID &quot; + id, id);</span>
+<span class="fc" id="L246">            store.commit();</span>
+<span class="fc" id="L247">        }</span>
+<span class="fc" id="L248">    }</span>
+
+    /** Reauthenticates before applying profile changes; returns true when the UI must sign out. */
+    public boolean profile(String admin, String name, String current, String password, String confirm) {
+<span class="fc" id="L252">        synchronized (store) {</span>
+<span class="fc" id="L253">            Admin user = requireAdmin(admin);</span>
+<span class="fc" id="L254">            String nextName = fullName(name);</span>
+<span class="fc" id="L255">            market.auth().login(user.getUsername(), current, Role.ADMIN);</span>
+<span class="pc bpc" id="L256" title="3 of 8 branches missed.">            boolean changePassword = !(password == null || password.isEmpty()) || !(confirm == null || confirm.isEmpty());</span>
+<span class="fc bfc" id="L257" title="All 4 branches covered.">            if (!changePassword &amp;&amp; nextName.equals(user.getFullName())) throw new ValidationException(&quot;There are no changes to save.&quot;);</span>
+<span class="fc bfc" id="L258" title="All 2 branches covered.">            if (changePassword) {</span>
+<span class="fc" id="L259">                List&lt;String&gt; errors = CredentialValidator.passwordProblems(password);</span>
+<span class="fc bfc" id="L260" title="All 2 branches covered.">                if (!errors.isEmpty()) throw new ValidationException(errors);</span>
+<span class="fc bfc" id="L261" title="All 2 branches covered.">                if (!password.equals(confirm)) throw new ValidationException(&quot;New passwords do not match.&quot;);</span>
+<span class="fc bfc" id="L262" title="All 2 branches covered.">                if (password.equals(current)) throw new ValidationException(&quot;Choose a different password.&quot;);</span>
+<span class="fc" id="L263">                String salt = PasswordHasher.newSalt();</span>
+<span class="fc" id="L264">                user.setPassword(PasswordHasher.hash(password, salt), salt);</span>
+            }
+<span class="fc" id="L266">            user.setFullName(nextName);</span>
+<span class="fc" id="L267">            audit(admin, ACCOUNT, &quot;Admin profile updated&quot;, user.getUsername(), admin);</span>
+<span class="fc" id="L268">            store.commit();</span>
+<span class="fc" id="L269">            return changePassword;</span>
+        }
+    }
+
+    /** Changes public visibility. Existing Buyer summaries compute averages from visible reviews. */
+    public void hideReview(String admin, String id, boolean hidden) {
+<span class="fc" id="L275">        synchronized (store) {</span>
+<span class="fc" id="L276">            requireAdmin(admin);</span>
+<span class="fc" id="L277">            Review r = store.reviews().stream().filter(x -&gt; x.getId().equals(id)).findFirst()</span>
+<span class="pc" id="L278">                    .orElseThrow(() -&gt; new MarketplaceException(&quot;Review not found.&quot;));</span>
+<span class="fc" id="L279">            r.setHidden(hidden);</span>
+<span class="fc bfc" id="L280" title="All 2 branches covered.">            audit(admin, MODERATION, hidden ? &quot;Rating hidden&quot; : &quot;Rating restored&quot;, &quot;Review &quot; + id, id);</span>
+<span class="fc" id="L281">            store.commit();</span>
+<span class="fc" id="L282">        }</span>
+<span class="fc" id="L283">    }</span>
+
+    /** Archives or restores an owned admin notification, retaining its timestamp and audit record. */
+    public void archive(String admin, String id, boolean archived) {
+<span class="fc" id="L287">        synchronized (store) {</span>
+<span class="fc" id="L288">            requireAdmin(admin);</span>
+<span class="fc" id="L289">            Notification n = market.notifications().forUser(admin, null, false).stream()</span>
+<span class="fc" id="L290">                    .filter(x -&gt; x.getId().equals(id)).findFirst().orElseThrow(() -&gt; new MarketplaceException(&quot;Notification not found.&quot;));</span>
+<span class="fc" id="L291">            n.setArchived(archived);</span>
+<span class="fc" id="L292">            store.commit();</span>
+<span class="fc" id="L293">        }</span>
+<span class="fc" id="L294">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

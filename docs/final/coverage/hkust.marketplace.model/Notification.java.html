@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Notification.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace (COMP3111 G48)</a> &gt; <a href="index.source.html" class="el_package">hkust.marketplace.model</a> &gt; <span class="el_source">Notification.java</span></div><h1>Notification.java</h1><pre class="source lang-java linenums">package hkust.marketplace.model;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+/** A timestamped, categorised message the system sends to one user. */
+public class Notification implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final String id;
+    private final String userId;
+    private final NotificationCategory category;
+    private final String title;
+    private final String content;
+    private final LocalDateTime createdAt;
+    private final String relatedId;
+    private boolean read;
+    private boolean archived;
+
+    /**
+     * Creates an unread notification.
+     * @param id unique id
+     * @param userId recipient
+     * @param category category
+     * @param title short title
+     * @param content full message
+     * @param createdAt time sent
+     * @param relatedId id of the related listing, deal, thread or review, or null
+     */
+    public Notification(String id, String userId, NotificationCategory category, String title, String content,
+<span class="fc" id="L31">                        LocalDateTime createdAt, String relatedId) {</span>
+<span class="fc" id="L32">        this.id = id;</span>
+<span class="fc" id="L33">        this.userId = userId;</span>
+<span class="fc" id="L34">        this.category = category;</span>
+<span class="fc" id="L35">        this.title = title;</span>
+<span class="fc" id="L36">        this.content = content;</span>
+<span class="fc" id="L37">        this.createdAt = createdAt;</span>
+<span class="fc" id="L38">        this.relatedId = relatedId;</span>
+<span class="fc" id="L39">    }</span>
+
+    /** @return unique id */
+<span class="fc" id="L42">    public String getId() { return id; }</span>
+    /** @return recipient id */
+<span class="fc" id="L44">    public String getUserId() { return userId; }</span>
+    /** @return category */
+<span class="fc" id="L46">    public NotificationCategory getCategory() { return category; }</span>
+    /** @return title */
+<span class="fc" id="L48">    public String getTitle() { return title; }</span>
+    /** @return full message */
+<span class="fc" id="L50">    public String getContent() { return content; }</span>
+    /** @return time sent */
+<span class="fc" id="L52">    public LocalDateTime getCreatedAt() { return createdAt; }</span>
+    /** @return related record id, or null */
+<span class="fc" id="L54">    public String getRelatedId() { return relatedId; }</span>
+    /** @return true once opened */
+<span class="fc" id="L56">    public boolean isRead() { return read; }</span>
+    /** @param read read state */
+<span class="fc" id="L58">    public void setRead(boolean read) { this.read = read; }</span>
+    /** @return true if archived (admin board) */
+<span class="fc" id="L60">    public boolean isArchived() { return archived; }</span>
+    /** @param archived archived state */
+<span class="fc" id="L62">    public void setArchived(boolean archived) { this.archived = archived; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

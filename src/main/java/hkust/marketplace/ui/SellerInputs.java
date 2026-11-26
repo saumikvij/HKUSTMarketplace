@@ -33,6 +33,7 @@ final class SellerInputs {
     static Label row(GridPane grid, int index, String name, Node field) {
         Label label = new Label(name);
         label.setLabelFor(field);
+        label.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         grid.addRow(index, label, field);
         GridPane.setHgrow(field, Priority.ALWAYS);
         return label;
